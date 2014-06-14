@@ -9,8 +9,9 @@
 		<meta name="mobile-web-app-capable" content="yes" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <script>
-      var GAME = {
-        core: {}
+      var snorb = {
+        core: {},
+        util: {}
       };
     </script>
 	</head>
@@ -19,26 +20,25 @@
 		<div id="game" class="viewer"></div>
     <div id="debug"></div>
 		<!-- External libraries -->
-		<script src="lib/three.min.js"></script>
+		<script src="lib/jquery-2.1.1.js"></script>
 		<script src="lib/underscore.js"></script>
 
-		<script src="lib/OrbitControls.js"></script>		
-		<script src="lib/RequestAnimationFrame.js"></script>
+		<script src="lib/three.min.js"></script>
+		<script src="lib/three/OrbitControls.js"></script>		
+		<script src="lib/three/RequestAnimationFrame.js"></script>
+		<script src="lib/three/WaterMaterial.js"></script>
 
-		<script src="lib/jquery-2.1.1.js"></script>
-		
-		<!-- Water shader -->
-		<script src="lib/water-material.js"></script>
-
-    <!-- Structures -->
-
-		<!-- Game files -->
+		<!-- Modules -->
+		<script src="core/util.js"></script>
+		<!-- Classes -->
 		<script src="core/State.js"></script>
 		<script src="core/Scene.js"></script>
+		<script src="core/Terra.js"></script>
 
     <script>
       jQuery(function($){
-        GAME.scene = new GAME.core.Scene('game');
+        snorb.scene = new snorb.core.Scene('game');
+        snorb.terra = new snorb.core.Terra(snorb.scene.object);
       });
     </script>
 

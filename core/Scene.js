@@ -1,6 +1,6 @@
 'use strict';
 
-GAME.core.Scene = function(domElementId, data){
+snorb.core.Scene = function(domElementId, data){
   var that = this;
 
   this.defaults = {
@@ -58,7 +58,7 @@ GAME.core.Scene = function(domElementId, data){
   this.object.add(directionalLight);
   
   // Create the water effect
-  var waterNormals = new THREE.ImageUtils.loadTexture('tex/scene/waternormals.jpg');
+  var waterNormals = new THREE.ImageUtils.loadTexture('textures/scene/waternormals.jpg');
   waterNormals.wrapS = waterNormals.wrapT = THREE.RepeatWrapping; 
   this.water = new THREE.Water(this.renderer, this.camera, this.object, {
     textureWidth: 256,
@@ -86,12 +86,12 @@ GAME.core.Scene = function(domElementId, data){
   // Create skybox
   this.skybox = (function(){
     var cubeMap = THREE.ImageUtils.loadTextureCube([
-      'tex/scene/sky/px.jpg',
-      'tex/scene/sky/nx.jpg',
-      'tex/scene/sky/py.jpg',
-      'tex/scene/sky/ny.jpg',
-      'tex/scene/sky/pz.jpg',
-      'tex/scene/sky/nz.jpg'
+      'textures/scene/sky/px.jpg',
+      'textures/scene/sky/nx.jpg',
+      'textures/scene/sky/py.jpg',
+      'textures/scene/sky/ny.jpg',
+      'textures/scene/sky/pz.jpg',
+      'textures/scene/sky/nz.jpg'
     ]);
     cubeMap.format = THREE.RGBFormat;
 
@@ -139,4 +139,4 @@ GAME.core.Scene = function(domElementId, data){
   });
 
 };
-GAME.core.Scene.prototype = new GAME.core.State();
+snorb.core.Scene.prototype = new snorb.core.State();
