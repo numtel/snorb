@@ -4,6 +4,12 @@ uniform sampler2D texture_bare;
 uniform sampler2D texture_snow;
 uniform sampler2D texture_rock;
 
+uniform bool show_ring;
+uniform float ring_width;
+uniform vec4 ring_color;
+uniform vec3 ring_center;
+uniform float ring_radius;
+
 varying vec2 vUv;
 varying vec3 vPosition;
 varying vec3 vLightFront;
@@ -52,4 +58,26 @@ void main(){
   gl_FragColor=vec4(fragcolor, 1.0);
   gl_FragColor.xyz = gl_FragColor.xyz * vLightFront;
   THREE.ShaderChunk['shadowmap_fragment']
+
+  float distance = sqrt((vPosition.x - ring_center.x) * (vPosition.x - ring_center.x) + 
+    (vPosition.y - ring_center.y) * (vPosition.y - ring_center.y));
+
+  if(show_ring == true && 
+      distance < ring_radius) {
+    gl_FragColor.r += ring_color.r / 2.0;
+    gl_FragColor.b += ring_color.b / 2.0;
+    gl_FragColor.g += ring_color.g / 2.0;
+    gl_FragColor.a += ring_color.a / 2.0;
+    gl_FragColor = normalize(gl_FragColor);
+  }
+  if(show_ring == true && 
+      distance < ring_radius + ring_width / 2.0 && 
+      distance > ring_radius - ring_width / 2.0) {
+    gl_FragColor.r += ring_color.r;
+    gl_FragColor.b += ring_color.b;
+    gl_FragColor.g += ring_color.g;
+    gl_FragColor.a += ring_color.a;
+    gl_FragColor = normalize(gl_FragColor);
+  }
+
 }

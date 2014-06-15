@@ -5,11 +5,17 @@ snorb.core.Scene = function(domElementId, data){
 
   this.defaults = {
     camera: {
+      // Updating these data values at run time doesn't work
       position: new THREE.Vector3(-500, 500, 500),
       center: new THREE.Vector3(0, 0, 0)
+    },
+    cursor: {
+      // These are good for updating at run time
+      radius: 100,
+      visible: false
     }
   };
-  data = _.defaults(data || {}, this.defaults);
+  this.data = data = _.defaults(data || {}, this.defaults);
 
   this.supportWebGL = function(){
     try{
@@ -43,7 +49,7 @@ snorb.core.Scene = function(domElementId, data){
   this.camera.position.copy(data.camera.position);
   this.camera.lookAt(data.camera.center);
 
-  this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+  //this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
   
   // Add light
   var directionalLight = new THREE.DirectionalLight(0xffffff, 1);
@@ -117,7 +123,7 @@ snorb.core.Scene = function(domElementId, data){
 
   this.update = function(){
     that.water.material.uniforms.time.value += 1.0 / 60.0;
-    that.controls.update();
+    //that.controls.update();
     that.display();
   };
 
@@ -138,18 +144,55 @@ snorb.core.Scene = function(domElementId, data){
     that.update();
   });
 
-  this.terra = []
+  this.terra = [];
+  this.tools = {};
+  _.each(snorb.tools, function(tool, toolKey){
+    that.tools[toolKey] = new tool(that);
+  });
+  var activeTool = undefined;
+
+  this.setTool = function(toolKey){
+    if(this.activeTool){
+      this.activeTool.deselect();
+    }
+    this.activeTool = this.tools[toolKey];
+    if(this.activeTool){
+      this.activeTool.select();
+    }
+  };
+
   // Mouse Events
-  this.domElement.addEventListener('mousemove', function(event){
-    var point = snorb.util.mouseIntersect(
-                  event.clientX, event.clientY,
-                  that.terra, that.camera);
-    console.log(point); 
-  }, false);
-  this.domElement.addEventListener('mousedown', function(event){
-  }, false);
-  this.domElement.addEventListener('mouseup', function(event){
-  }, false);
+  var mouseHandler = function(specific){
+    return function(event){
+      var point = snorb.util.mouseIntersect(
+                    event.clientX, event.clientY,
+                    that.terra, that.camera),
+          curTerra;
+      if(point.length){
+        curTerra = point[0].object.terra;
+      };
+      _.each(that.terra, function(terraMesh){
+        if(curTerra !== terraMesh.terra){
+          // Hide cursor on inactive terras
+          terraMesh.terra.setCursor(undefined, false);
+        }else{
+          var terraPos = new THREE.Vector3(point[0].point.x,
+                                          -point[0].point.z,
+                                          point[0].point.y);
+
+          if(that.activeTool){
+            that.activeTool[specific](terraPos, terraMesh.terra, event);
+          };
+          
+          terraMesh.terra.setCursor(terraPos, that.data.cursor.visible,
+                                    that.data.cursor.radius);
+        };
+      });
+    };
+  };
+  _.each(['mousemove', 'mousedown', 'mouseup'], function(specific){
+    that.domElement.addEventListener(specific, mouseHandler(specific), false);
+  });
   
 
 };

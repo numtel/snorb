@@ -11,22 +11,24 @@ snorb.core.Terra = function(scene, data){
   };
   this.data = data = _.defaults(data || {}, this.defaults);
 
-  // Methods
+  // Private Methods
+  var getIndex = function(pos){
+    var xStart = -data.size.x * data.scale / 2,
+        yStart = data.size.y * data.scale / 2,
+        vertexIndex = Math.round((pos.x - xStart) / data.scale) +
+          (-Math.round((pos.y - yStart) / data.scale) * (data.size.x+1));
+    if(pos.x < xStart || 
+       pos.x > -xStart || 
+       vertexIndex >= ((data.size.x + 1) * (data.size.y + 1)) || 
+       vertexIndex < 0){
+      // off terrain
+      return undefined;
+    }
+    return vertexIndex;
+  };
+
+  // Public Methods
   this.coord = function(pos){
-    var getIndex = function(pos){
-      var xStart = -data.size.x * data.scale / 2,
-          yStart = data.size.y * data.scale / 2,
-          vertexIndex = Math.round((pos.x - xStart) / data.scale) +
-            (-Math.round((pos.y - yStart) / data.scale) * (data.size.x+1));
-      if(pos.x < xStart || 
-         pos.x > -xStart || 
-         vertexIndex >= ((data.size.x + 1) * (data.size.y + 1)) || 
-         vertexIndex < 0){
-        // off terrain
-        return undefined;
-      }
-      return vertexIndex;
-    };
     var x = pos.x, y = pos.y,
         xR10 = x - (x % data.scale),
         yR10 = y - (y % data.scale),
@@ -90,7 +92,146 @@ snorb.core.Terra = function(scene, data){
             altitude: altitude};
   };
 
-  this.changeAltitude = function(pos, amount, radius){
+  this.nearbyVerticesXXX = function(pos, radius){
+    var curIndex,
+        output = [],
+        layers = Math.floor(radius / data.scale),
+        layerRadius;
+    for(var r = 0; r < layers; r++){
+      output.push([]);
+      layerRadius = r * data.scale;
+      for(var x = pos.x - layerRadius; x <= pos.x + layerRadius; x += data.scale){
+        for(var y = pos.y - layerRadius; y <= pos.y + layerRadius; y += data.scale){
+          if(x === pos.x - layerRadius || y === pos.y - layerRadius ||
+              x === pos.x + layerRadius || y === pos.y + layerRadius){
+            curIndex = getIndex(new THREE.Vector2(x, y));
+            if(curIndex !== undefined){
+              output[r].push(curIndex);
+            };
+          };
+        };
+      };
+    };
+    return output;
+  };
+
+  this.nearbyVertices=function(pos, radius){
+    var coord = that.coord(pos),
+        originIndex,
+        output = [],
+        curRadius = 0;
+    if(coord.se !== undefined){
+      originIndex = coord.se;
+    }else if(coord.sw !== undefined){
+      originIndex = coord.sw;
+    }else if(coord.ne !== undefined){
+      originIndex = coord.ne;
+    }else if(coord.nw !== undefined){
+      originIndex = coord.nw;
+    }else{
+      return [];
+    }
+    //TODO: this is only for square maps!!!!
+    var vertices = geometry.vertices,
+        lenX = data.size.x + 1,
+        lenY = data.size.y + 1,
+        getNeighbors = function(index){
+          var output = [];
+          // top row
+          if(index % lenX > 0){
+            // left
+            if(index > lenX) {
+              output.push(index - lenX - 1);
+            }
+            // middle
+            output.push(index - 1);
+            // right
+            if(index + lenX < lenX * lenY){
+              output.push(index + lenX - 1);
+            }
+          }
+          // middle row
+          // left
+          if(index > lenX) {
+            output.push(index - lenX);
+          }
+          // right
+          if(index + lenX < lenX * lenY){
+            output.push(index + lenX);
+          }
+          // bottom row
+          if(index % lenX < lenY - 1){
+            // left
+            if(index > lenX) {
+              output.push(index - lenX + 1);
+            }
+            // middle
+            output.push(index + 1);
+            // right
+            if(index + lenX < lenX * lenY){
+              output.push(index + lenX + 1);
+            }
+          }
+          return output;
+        },
+        foundAlready = function(output, index){
+          for(var i = 0; i<output.length;i++){
+            if(output[i].indexOf(index)!==-1){
+              return true;
+            }
+          }
+          return false;
+        },
+        i, j, neighbors, newNeighbors;
+    while(curRadius<radius){
+      if(curRadius === 0){
+        output.push(getNeighbors(originIndex));
+        output[0].push(originIndex);
+      } else {
+        newNeighbors = [];
+        for(i = 0; i<output[curRadius-1].length; i++){
+          neighbors = getNeighbors(output[curRadius-1][i]);
+          for(j = 0; j<neighbors.length; j++){
+            if(neighbors[j] !== originIndex &&
+                !foundAlready(output, neighbors[j]) &&
+                newNeighbors.indexOf(neighbors[j]) === -1){
+              newNeighbors.push(neighbors[j]);
+            }
+          }
+        }
+        output.push(newNeighbors);
+      }
+      curRadius++;
+    }
+    return output;
+  };
+
+  this.updateVertices = function(){
+    geometry.verticesNeedUpdate=true;
+    geometry.normalsNeedUpdate = true;
+    geometry.computeFaceNormals();
+    geometry.computeVertexNormals();
+  };
+
+  this.setCursor = function(pos, visible, radius, color){
+    if(pos !== undefined){
+      // Vec3
+      material.uniforms.ring_center.value.x = pos.x;
+      material.uniforms.ring_center.value.y = pos.y;
+      material.uniforms.ring_center.value.z = pos.z;
+    }
+    if(visible !== undefined){
+      // Boolean
+      material.uniforms.show_ring.value = visible;
+    }
+    if(radius !== undefined){
+      // Boolean
+      material.uniforms.ring_radius.value = radius;
+    }
+    if(color !== undefined){
+      // Color is Vec4 RGBA
+      material.uniforms.ring_color.value = color;
+    }
   };
 
   // Initialize
@@ -149,7 +290,13 @@ snorb.core.Terra = function(scene, data){
       shadowMapSize: { type: "v2v", value: [] },
       shadowBias: { type: "fv1", value: [] },
       shadowDarkness: { type: "fv1", value: [] },
-      shadowMatrix: { type: "m4v", value: [] }
+      shadowMatrix: { type: "m4v", value: [] },
+
+      show_ring: { type: 'i', value: false },
+      ring_width: { type: 'f', value: 5.0 },
+      ring_color: { type: 'v4', value: new THREE.Vector4(0.0, 0.0, 0.7, 1.0) },
+      ring_center: { type: 'v3', value: new THREE.Vector3() },
+      ring_radius: { type: 'f', value: 50.0 }
     },
     attributes: {
     },
@@ -188,6 +335,7 @@ snorb.core.Terra = function(scene, data){
 
   this.object = new THREE.Mesh(geometry, material);
   this.object.rotation.x = -Math.PI / 2;
+  this.object.position.copy(data.position);
   this.object.dynamic = true;
   this.object.receiveShadow = true;
   this.object.castShadow = true;
