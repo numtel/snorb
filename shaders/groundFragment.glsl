@@ -63,7 +63,7 @@ void main(){
     (vPosition.y - ring_center.y) * (vPosition.y - ring_center.y));
 
   if(show_ring == true && 
-      distance < ring_radius) {
+      distance < ring_radius - ring_width / 2.0) {
     gl_FragColor.r += ring_color.r / 2.0;
     gl_FragColor.b += ring_color.b / 2.0;
     gl_FragColor.g += ring_color.g / 2.0;
