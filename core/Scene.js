@@ -5,12 +5,10 @@ snorb.core.Scene = function(domElementId, data){
 
   this.defaults = {
     camera: {
-      // Read only at run time
       position: new THREE.Vector3(-500, 500, 500),
       center: new THREE.Vector3(0, 100, 0)
     },
     cursor: {
-      // Read/write at run time
       radius: 100,
       visible: false
     }
@@ -49,7 +47,9 @@ snorb.core.Scene = function(domElementId, data){
   this.camera.position.copy(data.camera.position);
   this.camera.lookAt(data.camera.center);
 
-  //this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+  this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+  data.camera.center = this.controls.center;
+  data.camera.position = this.camera.position;
   
   // Add light
   var directionalLight = new THREE.DirectionalLight(0xffffff, 1);
@@ -123,7 +123,7 @@ snorb.core.Scene = function(domElementId, data){
 
   this.update = function(){
     that.water.material.uniforms.time.value += 1.0 / 60.0;
-    //that.controls.update();
+    that.controls.update();
     that.display();
   };
 
@@ -178,7 +178,8 @@ snorb.core.Scene = function(domElementId, data){
                         y: that.data.camera.center.y,
                         z: that.data.camera.center.z},
           animFunction = function(){
-            var nowPosition = {}, nowCenter = {};
+            var nowPosition = new THREE.Vector3(0, 0, 0),
+                nowCenter = new THREE.Vector3(0, 0, 0);
             for(var i in origObject){
               if(origObject.hasOwnProperty(i)){
                 nowPosition[i] = origObject[i] + (newPosition[i] * 
@@ -188,9 +189,7 @@ snorb.core.Scene = function(domElementId, data){
               };
             };
             that.camera.position.copy(nowPosition);
-            that.camera.lookAt(nowCenter);
-            that.data.camera.position = nowPosition;
-            that.data.camera.center = nowCenter;
+            that.controls.center.copy(nowCenter);
             if(prop === 0){
               clearInterval(activePanInterval);
               activePanInterval = undefined;
@@ -265,43 +264,6 @@ snorb.core.Scene = function(domElementId, data){
   _.each(['mousemove', 'mousedown', 'mouseup'], function(specific){
     that.domElement.addEventListener(specific, mouseHandler(specific), false);
   });
-  that.domElement.addEventListener('contextmenu', 
-    function (event) { event.preventDefault(); }, false );
-  
-  var onMouseWheel =  function onMouseWheel( event ) {
-    var delta = 0, 
-        diff = new THREE.Vector3(
-            (data.camera.position.x - data.camera.center.x)/4,
-            (data.camera.position.y - data.camera.center.y)/4,
-            (data.camera.position.z - data.camera.center.z)/4
-          );
-    if(event.wheelDelta){ // WebKit / Opera / Explorer 9
-      delta = event.wheelDelta;
-    }else if(event.detail ){ // Firefox
-      delta = - event.detail;
-    };
-    if(delta > 0){
-      if(diff.y < 10){
-        // You are too zoomed!
-        return;
-      };
-      data.camera.position.x -= diff.x;
-      data.camera.position.y -= diff.y;
-      data.camera.position.z -= diff.z;
-    }else{
-      if(data.camera.position.y > 2000){
-        // Too far!
-        return;
-      };
-      data.camera.position.x += diff.x;
-      data.camera.position.y += diff.y;
-      data.camera.position.z += diff.z;
-    };
-    that.camera.position.copy(data.camera.position);
-    that.camera.lookAt(data.camera.center);
-  }
-  that.domElement.addEventListener( 'mousewheel', onMouseWheel, false );
-  that.domElement.addEventListener( 'DOMMouseScroll', onMouseWheel, false ); // firefox
 
 };
 snorb.core.Scene.prototype = new snorb.core.State();
