@@ -7,7 +7,7 @@ snorb.core.Scene = function(domElementId, data){
     camera: {
       // Read only at run time
       position: new THREE.Vector3(-500, 500, 500),
-      center: new THREE.Vector3(0, 0, 0)
+      center: new THREE.Vector3(0, 100, 0)
     },
     cursor: {
       // Read/write at run time
@@ -249,6 +249,36 @@ snorb.core.Scene = function(domElementId, data){
   that.domElement.addEventListener('contextmenu', 
     function (event) { event.preventDefault(); }, false );
   
+  var onMouseWheel =  function onMouseWheel( event ) {
+    var delta = 0, 
+        diff = new THREE.Vector3(
+            (data.camera.position.x - data.camera.center.x)/4,
+            (data.camera.position.y - data.camera.center.y)/4,
+            (data.camera.position.z - data.camera.center.z)/4
+          );
+    if(event.wheelDelta){ // WebKit / Opera / Explorer 9
+      delta = event.wheelDelta;
+    }else if(event.detail ){ // Firefox
+      delta = - event.detail;
+    };
+    if(delta > 0){
+      if(diff.y < 10){
+        // You are too zoomed!
+        return;
+      }
+      data.camera.position.x -= diff.x;
+      data.camera.position.y -= diff.y;
+      data.camera.position.z -= diff.z;
+    }else{
+      data.camera.position.x += diff.x;
+      data.camera.position.y += diff.y;
+      data.camera.position.z += diff.z;
+    };
+    that.camera.position.copy(data.camera.position);
+    that.camera.lookAt(data.camera.center);
+  }
+  that.domElement.addEventListener( 'mousewheel', onMouseWheel, false );
+  that.domElement.addEventListener( 'DOMMouseScroll', onMouseWheel, false ); // firefox
 
 };
 snorb.core.Scene.prototype = new snorb.core.State();
