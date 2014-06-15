@@ -265,11 +265,15 @@ snorb.core.Scene = function(domElementId, data){
       if(diff.y < 10){
         // You are too zoomed!
         return;
-      }
+      };
       data.camera.position.x -= diff.x;
       data.camera.position.y -= diff.y;
       data.camera.position.z -= diff.z;
     }else{
+      if(data.camera.position.y > 2000){
+        // Too far!
+        return;
+      };
       data.camera.position.x += diff.x;
       data.camera.position.y += diff.y;
       data.camera.position.z += diff.z;

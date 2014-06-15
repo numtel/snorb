@@ -33,6 +33,7 @@ snorb.tools.terrainRaise = function(scene, data){
       };
       terra.updateVertices();
     };
+    that.mouseup();
     that.activeInterval = setInterval(raiseAtCursor, 100);
     raiseAtCursor();
   };
