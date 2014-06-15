@@ -5,12 +5,12 @@ snorb.core.Scene = function(domElementId, data){
 
   this.defaults = {
     camera: {
-      // Updating these data values at run time doesn't work
+      // Read only at run time
       position: new THREE.Vector3(-500, 500, 500),
       center: new THREE.Vector3(0, 0, 0)
     },
     cursor: {
-      // These are good for updating at run time
+      // Read/write at run time
       radius: 100,
       visible: false
     }
@@ -144,6 +144,55 @@ snorb.core.Scene = function(domElementId, data){
     that.update();
   });
 
+  this.curAnim = undefined;
+  this.animatePan = function(newPosition){
+    if(this.curAnim){
+      clearInterval(this.curAnim);
+      this.curAnim = undefined;
+    }
+    var prop = 1,
+        origObject = {x: that.data.camera.position.x,
+                      y: that.data.camera.position.y,
+                      z: that.data.camera.position.z},
+        origCenter = {x: that.data.camera.center.x,
+                      y: that.data.camera.center.y,
+                      z: that.data.camera.center.z},
+        animFunction = function(){
+          var nowPosition = {}, nowCenter = {};
+          for(var i in origObject){
+            if(origObject.hasOwnProperty(i)){
+              nowPosition[i] = origObject[i] + (newPosition[i] * 
+                Math.sin(Math.PI/2*(1-prop)));
+              nowCenter[i] = origCenter[i] + (newPosition[i] * 
+                Math.sin(Math.PI/2*(1-prop)));
+            };
+          };
+          that.camera.position.copy(nowPosition);
+          that.camera.lookAt(nowCenter);
+          that.data.camera.position = nowPosition;
+          that.data.camera.center = nowCenter;
+          if(prop === 0){
+            clearInterval(that.curAnim);
+            that.curAnim = undefined;
+          }else{
+            prop *= 0.5;
+            if(prop < 0.01){
+              prop = 0;
+            }
+          }
+        };
+    animFunction();
+    that.curAnim = setInterval(animFunction, 30);
+  };
+
+  this.pan = function (pos, terra) {
+    this.animatePan({x: terra.object.position.x + pos.x - this.data.camera.center.x,
+                     y: terra.object.position.y + pos.z - this.data.camera.center.y,
+                     z: terra.object.position.z - pos.y - this.data.camera.center.z});
+  };
+
+
+  // Tools
   this.terra = [];
   this.tools = {};
   _.each(snorb.tools, function(tool, toolKey){
@@ -179,11 +228,15 @@ snorb.core.Scene = function(domElementId, data){
           var terraPos = new THREE.Vector3(point[0].point.x,
                                           -point[0].point.z,
                                           point[0].point.y);
-
-          if(that.activeTool){
-            that.activeTool[specific](terraPos, terraMesh.terra, event);
+          if(event.button === 2){
+            if(specific === 'mousedown'){
+              that.pan(terraPos, curTerra);
+            };
+          }else{
+            if(that.activeTool){
+              that.activeTool[specific](terraPos, terraMesh.terra, event);
+            };
           };
-          
           terraMesh.terra.setCursor(terraPos, that.data.cursor.visible,
                                     that.data.cursor.radius);
         };
@@ -193,6 +246,8 @@ snorb.core.Scene = function(domElementId, data){
   _.each(['mousemove', 'mousedown', 'mouseup'], function(specific){
     that.domElement.addEventListener(specific, mouseHandler(specific), false);
   });
+  that.domElement.addEventListener('contextmenu', 
+    function (event) { event.preventDefault(); }, false );
   
 
 };
