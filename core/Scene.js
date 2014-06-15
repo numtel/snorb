@@ -224,6 +224,11 @@ snorb.core.Scene = function(domElementId, data){
         if(curTerra !== terraMesh.terra){
           // Hide cursor on inactive terras
           terraMesh.terra.setCursor(undefined, false);
+          if(event.button !== 2){
+            if(that.activeTool){
+              that.activeTool[specific](undefined, terraMesh.terra, event);
+            };
+          };
         }else{
           var terraPos = new THREE.Vector3(point[0].point.x,
                                           -point[0].point.z,

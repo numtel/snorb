@@ -92,29 +92,6 @@ snorb.core.Terra = function(scene, data){
             altitude: altitude};
   };
 
-  this.nearbyVerticesXXX = function(pos, radius){
-    var curIndex,
-        output = [],
-        layers = Math.floor(radius / data.scale),
-        layerRadius;
-    for(var r = 0; r < layers; r++){
-      output.push([]);
-      layerRadius = r * data.scale;
-      for(var x = pos.x - layerRadius; x <= pos.x + layerRadius; x += data.scale){
-        for(var y = pos.y - layerRadius; y <= pos.y + layerRadius; y += data.scale){
-          if(x === pos.x - layerRadius || y === pos.y - layerRadius ||
-              x === pos.x + layerRadius || y === pos.y + layerRadius){
-            curIndex = getIndex(new THREE.Vector2(x, y));
-            if(curIndex !== undefined){
-              output[r].push(curIndex);
-            };
-          };
-        };
-      };
-    };
-    return output;
-  };
-
   this.nearbyVertices=function(pos, radius){
     var coord = that.coord(pos),
         originIndex,
@@ -131,7 +108,6 @@ snorb.core.Terra = function(scene, data){
     }else{
       return [];
     }
-    //TODO: this is only for square maps!!!!
     var vertices = geometry.vertices,
         lenX = data.size.x + 1,
         lenY = data.size.y + 1,
@@ -192,7 +168,8 @@ snorb.core.Terra = function(scene, data){
         for(i = 0; i<output[curRadius-1].length; i++){
           neighbors = getNeighbors(output[curRadius-1][i]);
           for(j = 0; j<neighbors.length; j++){
-            if(neighbors[j] !== originIndex &&
+            if(neighbors[j] !== undefined &&
+                neighbors[j] !== originIndex &&
                 !foundAlready(output, neighbors[j]) &&
                 newNeighbors.indexOf(neighbors[j]) === -1){
               newNeighbors.push(neighbors[j]);
