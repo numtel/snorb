@@ -1,6 +1,8 @@
 'use strict';
 
+var lute = {};
+
 jQuery(function($){
-  snorb.scene = new snorb.core.Scene('game');
-  snorb.terra = new snorb.core.Terra(snorb.scene);
+  lute.scene = new snorb.core.Scene('game'),
+  lute.terra = new snorb.core.Terra(lute.scene);
 });

@@ -18,12 +18,14 @@ snorb.tools.terrainRaise = function(scene, data){
   };
   this.mousemove = function(pos, terra, event){
     if(pos === undefined && that.activeInterval !== undefined){
+      // mouse has left the terrain
       that.mouseup();
       that.stalled = true;
       return;
     };
     that.lastPos = pos;
     if(that.stalled && pos){
+      // mouse has returned to the terrain
       that.stalled = undefined;
       that.mousedown(pos, terra, event);
     };

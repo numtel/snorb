@@ -1,47 +1,42 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="utf-8">
-		<title>snorb</title>
-		<link href="ui/css/font-awesome.css" rel="stylesheet">
-		<link href="ui/css/style.css" rel="stylesheet">
-		<meta name="apple-mobile-web-app-capable" content="yes" />
-		<meta name="mobile-web-app-capable" content="yes" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <script>
-      var snorb = {
-        core: {},
-        util: {},
-        tools: {}
-      };
-    </script>
-	</head>
+  <head>
+    <meta charset="utf-8">
+    <title>snorb</title>
+    <link href="ui/css/font-awesome.css" rel="stylesheet">
+    <link href="ui/css/style.css" rel="stylesheet">
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  </head>
 
-	<body>	
-		<div id="game" class="viewer"></div>
+  <body>	
+    <div id="game" class="viewer"></div>
     <div id="debug"></div>
-		<!-- External libraries -->
-		<script src="lib/jquery-2.1.1.js"></script>
-		<script src="lib/underscore.js"></script>
+    <!-- External libraries -->
+    <script src="lib/jquery-2.1.1.js"></script>
+    <script src="lib/underscore.js"></script>
 
-		<script src="lib/three.min.js"></script>
-		<script src="lib/three/OrbitControls.js"></script>		
-		<script src="lib/three/RequestAnimationFrame.js"></script>
-		<script src="lib/three/WaterMaterial.js"></script>
+    <script src="lib/three.min.js"></script>
+    <script src="lib/three/OrbitControls.js"></script>		
+    <script src="lib/three/RequestAnimationFrame.js"></script>
+    <script src="lib/three/WaterMaterial.js"></script>
 
-		<!-- Modules -->
-		<script src="game/util.js"></script>
-		<!-- Classes -->
-		<script src="core/State.js"></script>
-		<script src="core/Scene.js"></script>
-		<script src="core/Terra.js"></script>
-		<script src="core/Tool.js"></script>
+    <!-- Initializer -->
+    <script src="core/snorb.js"></script>
+    <!-- Modules -->
+    <script src="game/util.js"></script>
+    <!-- Classes -->
+    <script src="core/State.js"></script>
+    <script src="core/Scene.js"></script>
+    <script src="core/Terra.js"></script>
+    <script src="core/Tool.js"></script>
 
-		<!-- Tools -->
-		<script src="game/tools/terrainRaise.js"></script>
+    <!-- Tools -->
+    <script src="game/tools/terrainRaise.js"></script>
 
-		<!-- Initializer -->
-		<script src="game/main.js"></script>
+    <!-- Main Module -->
+    <script src="game/main.js"></script>
 
-	</body>
+  </body>
 </html>

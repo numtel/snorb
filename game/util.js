@@ -41,20 +41,3 @@ snorb.util.randomString = function(length){
   return text;
 };
 
-
-snorb.util.projector = new THREE.Projector();
-snorb.util.mouseIntersect = function(x, y, object, camera){
-  var vector = new THREE.Vector3(
-      ( x / window.innerWidth ) * 2 - 1,
-      - ( y / window.innerHeight ) * 2 + 1,
-      0.5 );
-  snorb.util.projector.unprojectVector(vector, camera);
-
-  var dir = vector.sub(camera.position).normalize();
-  var ray = new THREE.Raycaster(camera.position.clone(), dir);
-  if(object instanceof Array){
-    return ray.intersectObjects(object);
-  }else{
-    return ray.intersectObject(object);
-  }
-};

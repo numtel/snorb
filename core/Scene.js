@@ -144,54 +144,6 @@ snorb.core.Scene = function(domElementId, data){
     that.update();
   });
 
-  this.curAnim = undefined;
-  this.animatePan = function(newPosition){
-    if(this.curAnim){
-      clearInterval(this.curAnim);
-      this.curAnim = undefined;
-    }
-    var prop = 1,
-        origObject = {x: that.data.camera.position.x,
-                      y: that.data.camera.position.y,
-                      z: that.data.camera.position.z},
-        origCenter = {x: that.data.camera.center.x,
-                      y: that.data.camera.center.y,
-                      z: that.data.camera.center.z},
-        animFunction = function(){
-          var nowPosition = {}, nowCenter = {};
-          for(var i in origObject){
-            if(origObject.hasOwnProperty(i)){
-              nowPosition[i] = origObject[i] + (newPosition[i] * 
-                Math.sin(Math.PI/2*(1-prop)));
-              nowCenter[i] = origCenter[i] + (newPosition[i] * 
-                Math.sin(Math.PI/2*(1-prop)));
-            };
-          };
-          that.camera.position.copy(nowPosition);
-          that.camera.lookAt(nowCenter);
-          that.data.camera.position = nowPosition;
-          that.data.camera.center = nowCenter;
-          if(prop === 0){
-            clearInterval(that.curAnim);
-            that.curAnim = undefined;
-          }else{
-            prop *= 0.5;
-            if(prop < 0.01){
-              prop = 0;
-            }
-          }
-        };
-    animFunction();
-    that.curAnim = setInterval(animFunction, 30);
-  };
-
-  this.pan = function (pos, terra) {
-    this.animatePan({x: terra.object.position.x + pos.x - this.data.camera.center.x,
-                     y: terra.object.position.y + pos.z - this.data.camera.center.y,
-                     z: terra.object.position.z - pos.y - this.data.camera.center.z});
-  };
-
-
   // Tools
   this.terra = [];
   this.tools = {};
@@ -211,11 +163,73 @@ snorb.core.Scene = function(domElementId, data){
   };
 
   // Mouse Events
+  var activePanInterval;
+  this.pan = function (pos, terra) {
+    var animatePan = function(newPosition){
+      if(activePanInterval){
+        clearInterval(activePanInterval);
+        activePanInterval = undefined;
+      }
+      var prop = 1,
+          origObject = {x: that.data.camera.position.x,
+                        y: that.data.camera.position.y,
+                        z: that.data.camera.position.z},
+          origCenter = {x: that.data.camera.center.x,
+                        y: that.data.camera.center.y,
+                        z: that.data.camera.center.z},
+          animFunction = function(){
+            var nowPosition = {}, nowCenter = {};
+            for(var i in origObject){
+              if(origObject.hasOwnProperty(i)){
+                nowPosition[i] = origObject[i] + (newPosition[i] * 
+                  Math.sin(Math.PI/2*(1-prop)));
+                nowCenter[i] = origCenter[i] + (newPosition[i] * 
+                  Math.sin(Math.PI/2*(1-prop)));
+              };
+            };
+            that.camera.position.copy(nowPosition);
+            that.camera.lookAt(nowCenter);
+            that.data.camera.position = nowPosition;
+            that.data.camera.center = nowCenter;
+            if(prop === 0){
+              clearInterval(activePanInterval);
+              activePanInterval = undefined;
+            }else{
+              prop *= 0.5;
+              if(prop < 0.01){
+                prop = 0;
+              }
+            }
+          };
+      animFunction();
+      activePanInterval = setInterval(animFunction, 30);
+    };
+    animatePan({x: terra.object.position.x + pos.x - this.data.camera.center.x,
+               y: terra.object.position.y + pos.z - this.data.camera.center.y,
+               z: terra.object.position.z - pos.y - this.data.camera.center.z});
+  };
+
+
+  this.projector = new THREE.Projector();
+  this.mouseIntersect = function(x, y, object){
+    var vector = new THREE.Vector3(
+        ( x / window.innerWidth ) * 2 - 1,
+        - ( y / window.innerHeight ) * 2 + 1,
+        0.5 );
+    that.projector.unprojectVector(vector, that.camera);
+
+    var dir = vector.sub(that.camera.position).normalize();
+    var ray = new THREE.Raycaster(that.camera.position.clone(), dir);
+    if(object instanceof Array){
+      return ray.intersectObjects(object);
+    }else{
+      return ray.intersectObject(object);
+    }
+  };
+
   var mouseHandler = function(specific){
     return function(event){
-      var point = snorb.util.mouseIntersect(
-                    event.clientX, event.clientY,
-                    that.terra, that.camera),
+      var point = that.mouseIntersect(event.clientX, event.clientY, that.terra),
           curTerra;
       if(point.length){
         curTerra = point[0].object.terra;
