@@ -27,7 +27,7 @@ snorb.core.Scene = function(domElementId, data){
   };
   this.domElement = document.getElementById(domElementId);
   if(!this.domElement){
-    throw 'Scene element not found!';
+    throw 'Element not found!';
   };
 
   this.renderer = new THREE.WebGLRenderer({
@@ -137,6 +137,20 @@ snorb.core.Scene = function(domElementId, data){
     requestAnimationFrame(animate);
     that.update();
   });
+
+  this.terra = []
+  // Mouse Events
+  this.domElement.addEventListener('mousemove', function(event){
+    var point = snorb.util.mouseIntersect(
+                  event.clientX, event.clientY,
+                  that.terra, that.camera);
+    console.log(point); 
+  }, false);
+  this.domElement.addEventListener('mousedown', function(event){
+  }, false);
+  this.domElement.addEventListener('mouseup', function(event){
+  }, false);
+  
 
 };
 snorb.core.Scene.prototype = new snorb.core.State();

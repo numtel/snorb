@@ -1,6 +1,6 @@
 'use strict';
 
-snorb.core.Terra = function(sceneObj, data){
+snorb.core.Terra = function(scene, data){
   var that = this;
 
   this.defaults = {
@@ -88,6 +88,9 @@ snorb.core.Terra = function(sceneObj, data){
             propNS: propY,
             propWE: propX,
             altitude: altitude};
+  };
+
+  this.changeAltitude = function(pos, amount, radius){
   };
 
   // Initialize
@@ -188,7 +191,10 @@ snorb.core.Terra = function(sceneObj, data){
   this.object.dynamic = true;
   this.object.receiveShadow = true;
   this.object.castShadow = true;
-  sceneObj.add( this.object );
+  this.object.terra = this;
+
+  scene.object.add(this.object);
+  scene.terra.push(this.object);
 
 };
 snorb.core.Terra.prototype = new snorb.core.State();
