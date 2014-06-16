@@ -127,6 +127,11 @@ snorb.core.Scene = function(domElementId, data){
     that.display();
   };
 
+  requestAnimationFrame(function animate(nowMsec){
+    requestAnimationFrame(animate);
+    that.update();
+  });
+
   this.resize = function(){
     that.camera.aspect = window.innerWidth / window.innerHeight;
     that.camera.updateProjectionMatrix();
@@ -138,11 +143,6 @@ snorb.core.Scene = function(domElementId, data){
 
   window.addEventListener('resize', this.resize, false);
   this.resize();
-
-  requestAnimationFrame(function animate(nowMsec){
-    requestAnimationFrame(animate);
-    that.update();
-  });
 
   // Tools
   this.terra = [];
