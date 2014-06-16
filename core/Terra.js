@@ -27,7 +27,37 @@ snorb.core.Terra = function(scene, data){
     return vertexIndex;
   };
 
+  var findWaterSurfaceVertices = function(originIndex, waterAlt){
+    // use nearbyVertices to determine which vertices exist
+    // contiguously with the given water depth
+    var vertices = geometry.vertices,
+        insideIndent = [originIndex],
+        alreadyLooked = [],
+        curIndex, neighbors;
+    while(insideIndent.length > 0){
+      curIndex = insideIndent.pop();
+      alreadyLooked.push(curIndex);
+      neighbors = this.nearbyVertices(curIndex,1);
+      for(var i = 0; i<neighbors[0].length; i++){
+        if(vertices[neighbors[0][i]].z<waterAlt && 
+            alreadyLooked.indexOf(neighbors[0][i]) === -1 &&
+            insideIndent.indexOf(neighbors[0][i]) === -1){
+          insideIndent.push(neighbors[0][i]);
+        }else if(vertices[neighbors[0][i]].z>=waterAlt &&
+            alreadyLooked.indexOf(neighbors[0][i]) === -1){
+          alreadyLooked.push(neighbors[0][i]);
+        }
+      }
+    }
+    return alreadyLooked;
+  };
+
   // Public Methods
+  this.adjustWaterLevel = function(pos, amount){
+    var coord = this.coord(pos);
+    // Find current water level
+  };
+
   this.coord = function(pos){
     var x = pos.x, y = pos.y,
         xR10 = x - (x % data.scale),
@@ -83,32 +113,39 @@ snorb.core.Terra = function(scene, data){
     }else if(viSE !== undefined){
       altitude = geometry.vertices[viSE].z;
     };
+    var anyVI;
+    if(viNW !== undefined){
+      anyVI = viNW;
+    }else if(viNE !== undefined){
+      anyVI = viNE;
+    }else if(viSW !== undefined){
+      anyVI = viSW;
+    }else if(viSE !== undefined){
+      anyVI = viSE;
+    }
+    var objects = that.repres.checkPoint(pos);
     return {nw: viNW,
             ne: viNE,
             sw: viSW,
             se: viSE,
+            anyVI: anyVI,
             propNS: propY,
             propWE: propX,
-            altitude: altitude};
+            altitude: altitude,
+            objects: objects};
   };
 
   this.nearbyVertices=function(pos, radius){
-    var coord = that.coord(pos),
-        originIndex,
-        output = [],
-        curRadius = 0;
-    if(coord.se !== undefined){
-      originIndex = coord.se;
-    }else if(coord.sw !== undefined){
-      originIndex = coord.sw;
-    }else if(coord.ne !== undefined){
-      originIndex = coord.ne;
-    }else if(coord.nw !== undefined){
-      originIndex = coord.nw;
+    var originIndex;
+    if(typeof pos === 'number'){
+      originIndex = pos;
     }else{
-      return [];
+      var coord = that.coord(pos);
+      originIndex  = coord.anyVI;
     }
     var vertices = geometry.vertices,
+        output = [],
+        curRadius = 0,
         lenX = data.size.x + 1,
         lenY = data.size.y + 1,
         getNeighbors = function(index){
@@ -320,6 +357,9 @@ snorb.core.Terra = function(scene, data){
 
   scene.object.add(this.object);
   scene.terra.push(this.object);
+
+  //TODO: what about the data?
+  this.repres = new snorb.core.Represent();
 
 };
 snorb.core.Terra.prototype = new snorb.core.State();
