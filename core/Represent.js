@@ -13,16 +13,9 @@ snorb.core.Represent = function(data){
   this.data = data = _.defaults(data || {}, this.defaults);
 
   this.register = function(polygon){
-    var key;
-    while(key === undefined || data.objects.hasOwnProperty(key)){
-      key = snorb.util.randomString();
-    };
-    var object = {
-      polygon: polygon,
-      key: key
-    };
-    data.objects[key] = object;
-    return object;
+    return new snorb.core.Representation(that, {
+      polygon: polygon
+    });
   };
 
   // Method generator

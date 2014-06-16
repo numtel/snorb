@@ -27,35 +27,44 @@ snorb.core.Terra = function(scene, data){
     return vertexIndex;
   };
 
-  var findWaterSurfaceVertices = function(originIndex, waterAlt){
-    // use nearbyVertices to determine which vertices exist
-    // contiguously with the given water depth
-    var vertices = geometry.vertices,
-        insideIndent = [originIndex],
-        alreadyLooked = [],
-        curIndex, neighbors;
-    while(insideIndent.length > 0){
-      curIndex = insideIndent.pop();
-      alreadyLooked.push(curIndex);
-      neighbors = this.nearbyVertices(curIndex,1);
-      for(var i = 0; i<neighbors[0].length; i++){
-        if(vertices[neighbors[0][i]].z<waterAlt && 
-            alreadyLooked.indexOf(neighbors[0][i]) === -1 &&
-            insideIndent.indexOf(neighbors[0][i]) === -1){
-          insideIndent.push(neighbors[0][i]);
-        }else if(vertices[neighbors[0][i]].z>=waterAlt &&
-            alreadyLooked.indexOf(neighbors[0][i]) === -1){
-          alreadyLooked.push(neighbors[0][i]);
-        }
-      }
-    }
-    return alreadyLooked;
-  };
 
   // Public Methods
   this.adjustWaterLevel = function(pos, amount){
-    var coord = this.coord(pos);
+    var findWaterSurfaceVertices = function(originIndex, waterAlt){
+      // use nearbyVertices to determine which vertices exist
+      // contiguously with the given water depth
+      var vertices = geometry.vertices,
+          insideIndent = [originIndex],
+          alreadyLooked = [],
+          curIndex, neighbors;
+      while(insideIndent.length > 0){
+        curIndex = insideIndent.pop();
+        alreadyLooked.push(curIndex);
+        neighbors = this.nearbyVertices(curIndex,1);
+        for(var i = 0; i<neighbors[0].length; i++){
+          if(vertices[neighbors[0][i]].z<waterAlt && 
+              alreadyLooked.indexOf(neighbors[0][i]) === -1 &&
+              insideIndent.indexOf(neighbors[0][i]) === -1){
+            insideIndent.push(neighbors[0][i]);
+          }else if(vertices[neighbors[0][i]].z>=waterAlt &&
+              alreadyLooked.indexOf(neighbors[0][i]) === -1){
+            alreadyLooked.push(neighbors[0][i]);
+          }
+        }
+      }
+      return alreadyLooked;
+    };
+    var coord = this.coord(pos),
+        curLevel = coord.altitude;
     // Find current water level
+    _.each(coord.objects, function(obj){
+      if(obj.type === 'water'){
+        curLevel = obj.altitude;
+      }
+    });
+    var newLevel = curLevel + amount,
+        indentVertices = findWaterSurfaceVetices(coord.anyVI, newLevel);
+    
   };
 
   this.coord = function(pos){
