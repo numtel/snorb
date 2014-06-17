@@ -15,13 +15,13 @@ snorb.core.Terra = function(scene, data){
 
   // Private Methods
   var getIndex = function(pos){
-    var xStart = -data.size.x * data.scale / 2,
-        yStart = data.size.y * data.scale / 2,
-        vertexIndex = Math.round((pos.x - xStart) / data.scale) +
-          (-Math.round((pos.y - yStart) / data.scale) * (data.size.x+1));
+    var xStart = -that.data.size.x * that.data.scale / 2,
+        yStart = that.data.size.y * that.data.scale / 2,
+        vertexIndex = Math.round((pos.x - xStart) / that.data.scale) +
+          (-Math.round((pos.y - yStart) / that.data.scale) * (that.data.size.x+1));
     if(pos.x < xStart || 
        pos.x > -xStart || 
-       vertexIndex >= ((data.size.x + 1) * (data.size.y + 1)) || 
+       vertexIndex >= ((that.data.size.x + 1) * (that.data.size.y + 1)) || 
        vertexIndex < 0){
       // off terrain
       return undefined;
@@ -33,14 +33,14 @@ snorb.core.Terra = function(scene, data){
   // Public Methods
   this.coord = function(pos){
     var x = pos.x, y = pos.y,
-        xR10 = x - (x % data.scale),
-        yR10 = y - (y % data.scale),
-        xW = x < 0 ? xR10 - data.scale : xR10,
-        xE = xW + data.scale,
-        yN = y < 0 ? yR10 - data.scale : yR10,
-        yS = yN + data.scale,
-        propY = (y-yN) / data.scale,
-        propX = (x-xW) / data.scale,
+        xR10 = x - (x % this.data.scale),
+        yR10 = y - (y % this.data.scale),
+        xW = x < 0 ? xR10 - this.data.scale : xR10,
+        xE = xW + this.data.scale,
+        yN = y < 0 ? yR10 - this.data.scale : yR10,
+        yS = yN + this.data.scale,
+        propY = (y-yN) / this.data.scale,
+        propX = (x-xW) / this.data.scale,
         viNW = getIndex({x: xW, y: yN}),
         viNE = getIndex({x: xE, y: yN}),
         viSW = getIndex({x: xW, y: yS}),
@@ -115,11 +115,14 @@ snorb.core.Terra = function(scene, data){
       var coord = that.coord(pos);
       originIndex  = coord.anyVI;
     }
+    if(originIndex === undefined){
+      return [];
+    };
     var vertices = geometry.vertices,
         output = [],
         curRadius = 0,
-        lenX = data.size.x + 1,
-        lenY = data.size.y + 1,
+        lenX = that.data.size.x + 1,
+        lenY = that.data.size.y + 1,
         getNeighbors = function(index){
           var output = [];
           // top row
@@ -306,20 +309,20 @@ snorb.core.Terra = function(scene, data){
   this.rebuildMesh = function(){
     if(this.object){
       scene.object.remove(this.object);
-      delete scene.terraMesh[scene.terraMesh.indexOf(this.object)];
+      scene.terraMesh.splice(scene.terraMesh.indexOf(this.object), 1);
     };
     geometry = new THREE.PlaneGeometry(
-      data.size.x * data.scale,
-      data.size.y * data.scale,
-      data.size.x,
-      data.size.y);
+      this.data.size.x * this.data.scale,
+      this.data.size.y * this.data.scale,
+      this.data.size.x,
+      this.data.size.y);
     if(data.altitude instanceof Array){
       for(var i = 0; i < geometry.vertices.length; i++){
-        geometry.vertices[i].z = data.altitude[i];
+        geometry.vertices[i].z = this.data.altitude[i];
       };
     }else{
       for(var i = 0; i < geometry.vertices.length; i++){
-        geometry.vertices[i].z = data.altitude;
+        geometry.vertices[i].z = this.data.altitude;
       };
     };
     geometry.computeFaceNormals();
@@ -354,6 +357,7 @@ snorb.core.Terra = function(scene, data){
     if(data){
       this.repres.reset(data.repres);
       delete data.repres;
+      this.data = _.defaults(data, this.defaults);
     }else{
       this.repres.reset();
       this.data = _.clone(this.defaults);

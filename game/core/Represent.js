@@ -59,7 +59,7 @@ snorb.core.Represent = function(terra, data){
     if(data === undefined){
       this.data = _.clone(this.defaults);
     }else{
-      this.data = _.clone(data);
+      this.data = _.defaults(data, this.defaults);
       this.buildObjectsInData();
     };
   };

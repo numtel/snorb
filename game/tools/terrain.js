@@ -31,7 +31,6 @@
         that.lastPos = pos;
         if(that.stalled && pos){
           // mouse has returned to the terrain
-          that.stalled = undefined;
           that.mousedown(pos, terra, event);
         };
       };
@@ -80,9 +79,12 @@
           }
           terra.updateVertices();
         };
+        that.stalled = undefined;
         that.mouseup();
-        that.activeInterval = setInterval(raiseAtCursor, 100);
-        raiseAtCursor();
+        if(scene.mouseIsDown){
+          that.activeInterval = setInterval(raiseAtCursor, 100);
+          raiseAtCursor();
+        };
       };
       this.mouseup = function(pos, terra, event){
         if(that.activeInterval){

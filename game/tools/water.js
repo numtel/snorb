@@ -100,6 +100,7 @@
         var waterGeometry = new THREE.ShapeGeometry(waterShape),
             waterMesh = new THREE.Mesh(waterGeometry, scene.water.material);
         waterMesh.position.y = newLevel;
+        waterMesh.position.add(terra.object.position);
         waterMesh.add(terra.scene.water.clone());
         waterMesh.rotation.x = -Math.PI * 0.5;
         terra.scene.object.add(waterMesh);
@@ -111,7 +112,7 @@
         representation.data.rebuildTool = 'waterRaise';
         representation.data.altitude = newLevel;
         representation.data.depthAtPos = newLevel - coord.altitude;
-        representation.data.pos = pos.clone();
+        representation.data.pos = new THREE.Vector2(pos.x, pos.y);
         representation.destroy = function(){
           terra.scene.object.remove(this.mesh);
         };
@@ -151,8 +152,10 @@
           }
         };
         that.mouseup();
-        that.activeInterval = setInterval(raiseAtCursor, 100);
-        raiseAtCursor();
+        if(scene.mouseIsDown){
+          that.activeInterval = setInterval(raiseAtCursor, 100);
+          raiseAtCursor();
+        };
       };
       this.mouseup = function(pos, terra, event){
         if(that.activeInterval){

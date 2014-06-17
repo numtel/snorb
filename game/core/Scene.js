@@ -139,7 +139,6 @@ snorb.core.Scene = function(domElementId, data){
   _.each(snorb.tools, function(tool, toolKey){
     that.tools[toolKey] = new tool(that);
   });
-  var activeTool = undefined;
 
   this.setTool = function(toolKey){
     if(this.activeTool){
@@ -234,12 +233,23 @@ snorb.core.Scene = function(domElementId, data){
         }else{
           var terraPos = new THREE.Vector3(point[0].point.x,
                                           -point[0].point.z,
-                                          point[0].point.y);
+                                          point[0].point.y)
+                   .sub(new THREE.Vector3(terraMesh.position.x,
+                                          -terraMesh.position.z,
+                                          terraMesh.position.y));
           if(event.button === 2){
             if(specific === 'mousedown'){
-              that.pan(terraPos, curTerra);
+              if(that.activeTool){
+                that.activeTool['mouseup'](terraPos, terraMesh.terra, event);
+              };
+              that.pan(terraPos, terraMesh.terra);
             };
           }else{
+            if(specific === 'mousedown'){
+              that.mouseIsDown = true;
+            }else if(specific === 'mouseup'){
+              that.mouseIsDown = false;
+            };
             if(that.activeTool){
               that.activeTool[specific](terraPos, terraMesh.terra, event);
             };
