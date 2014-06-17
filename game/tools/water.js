@@ -36,7 +36,9 @@
 
       this.mousedown = function(pos, terra, event){
         var raiseAtCursor = function(){
-          // TODO: something something water...
+          if(pos !== undefined){
+            terra.adjustWaterLevel(pos, that.data.amount * ordinal);
+          }
         };
         that.mouseup();
         that.activeInterval = setInterval(raiseAtCursor, 100);

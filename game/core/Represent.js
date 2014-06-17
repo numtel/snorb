@@ -28,11 +28,11 @@ snorb.core.Represent = function(data){
   };
 
   this.checkPolygon = filterObjects(function(polygon, obj){
-    return snorb.polygon.intersection(polygon, obj.polygon).length > 0;
+    return window.polygon.intersection(polygon, obj.polygon).length > 0;
   });
 
   this.checkPoint = filterObjects(function(point, obj){
-    return snorb.polygon.pointInside(point, obj.polygon, true);
+    return window.polygon.pointInside(point, obj.polygon, true);
   });
 
 };

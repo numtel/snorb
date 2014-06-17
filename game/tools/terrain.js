@@ -17,6 +17,7 @@
         scene.data.cursor.visible = true;
       };
       this.deselect = function(){
+        that.mouseup();
         scene.data.cursor.visible = false;
       };
       this.mousemove = function(pos, terra, event){
@@ -38,6 +39,29 @@
         var raiseAtCursor = function(){
           var nearby = terra.nearbyVertices(that.lastPos, that.data.radius / terra.data.scale),
               vertices = terra.object.geometry.vertices;
+          // Check for objects
+          var allPoints = [], polygon = [],
+              convexHull = new ConvexHull();
+          for(var r = 0; r<nearby.length; r++){
+            for(var i = 0; i<nearby[r].length; i++){
+              allPoints.push(new THREE.Vector2(
+                vertices[nearby[r][i]].x, vertices[nearby[r][i]].y));
+            };
+          };
+          convexHull.compute(allPoints);
+          var hullPoints = convexHull.getIndices();
+          for(var i = 0; i<hullPoints.length; i++){
+            polygon.push(allPoints[hullPoints[i]].clone());
+          };
+          var overlap = terra.repres.checkPolygon(polygon);
+          if(overlap.length){
+            // Pause if overlapping anything
+            that.mouseup();
+            that.stalled = true;
+            return false;
+          };
+          
+          // Perform operation
           if(typeof ordinal === "function"){
             ordinal.call(that, nearby, vertices);
           }else{

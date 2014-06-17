@@ -40,7 +40,7 @@ snorb.core.Terra = function(scene, data){
       while(insideIndent.length > 0){
         curIndex = insideIndent.pop();
         alreadyLooked.push(curIndex);
-        neighbors = this.nearbyVertices(curIndex,1);
+        neighbors = that.nearbyVertices(curIndex,1);
         for(var i = 0; i<neighbors[0].length; i++){
           if(vertices[neighbors[0][i]].z<waterAlt && 
               alreadyLooked.indexOf(neighbors[0][i]) === -1 &&
@@ -49,9 +49,9 @@ snorb.core.Terra = function(scene, data){
           }else if(vertices[neighbors[0][i]].z>=waterAlt &&
               alreadyLooked.indexOf(neighbors[0][i]) === -1){
             alreadyLooked.push(neighbors[0][i]);
-          }
-        }
-      }
+          };
+        };
+      };
       return alreadyLooked;
     };
     var coord = this.coord(pos),
@@ -60,11 +60,66 @@ snorb.core.Terra = function(scene, data){
     _.each(coord.objects, function(obj){
       if(obj.type === 'water'){
         curLevel = obj.altitude;
-      }
+      };
     });
     var newLevel = curLevel + amount,
-        indentVertices = findWaterSurfaceVetices(coord.anyVI, newLevel);
+        indentVertices = findWaterSurfaceVertices(coord.anyVI, newLevel),
+        convexHull = new ConvexHull(),
+        curV, allPoints = [],
+        waterShape = new THREE.Shape();
+
+    if(indentVertices.length < 2){
+      return;
+    };
     
+    for(var i = 0; i<indentVertices.length; i++){
+      curV = geometry.vertices[indentVertices[i]];
+      allPoints.push({x: curV.x, y: curV.y});
+    };
+    convexHull.compute(allPoints);
+    var hullPoints = convexHull.getIndices(),
+        footprint = [];
+    for(var i = 0; i<hullPoints.length; i++){
+      curV = allPoints[hullPoints[i]];
+      footprint.push(new THREE.Vector2(curV.x, curV.y));
+      if(i === 0){
+        waterShape.moveTo(curV.x, curV.y);
+      } else {
+        waterShape.lineTo(curV.x, curV.y);
+      };
+    };
+    var overlap = that.repres.checkPolygon(footprint),
+        isOnlyWater = true;
+    for(var i = 0; i<overlap.length; i++){
+      if(overlap[i].type !== 'water'){
+        isOnlyWater = false;
+      };
+    };
+    if(!isOnlyWater){
+      return false;
+    };
+    var oldWater;
+    while(overlap.length){
+      oldWater = overlap.pop();
+      scene.object.remove(oldWater.mesh);
+      oldWater.remove();
+    };
+   
+    if(newLevel < coord.altitude){
+      return true;
+    };
+ 
+    var waterGeometry = new THREE.ShapeGeometry(waterShape),
+        waterMesh = new THREE.Mesh(waterGeometry, scene.water.material);
+    waterMesh.position.y = newLevel;
+    waterMesh.add(scene.water.clone());
+    waterMesh.rotation.x = -Math.PI * 0.5;
+    scene.object.add(waterMesh);
+    var representation = that.repres.register(footprint);
+    representation.type = 'water';
+    representation.mesh = waterMesh;
+    representation.altitude = newLevel;
+    return true;
   };
 
   this.coord = function(pos){
@@ -181,7 +236,7 @@ snorb.core.Terra = function(scene, data){
             output.push(index + lenX);
           }
           // bottom row
-          if(index % lenX < lenY - 1){
+          if(index % lenX < lenX - 1){
             // left
             if(index > lenX) {
               output.push(index - lenX + 1);
@@ -189,7 +244,7 @@ snorb.core.Terra = function(scene, data){
             // middle
             output.push(index + 1);
             // right
-            if(index + lenX < lenX * lenY){
+            if(index + lenX + 1 < lenX * lenY){
               output.push(index + lenX + 1);
             }
           }

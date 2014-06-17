@@ -78,17 +78,6 @@ snorb.core.Scene = function(domElementId, data){
     side: THREE.DoubleSide
   });
 
-  // Add test water surface
-  var aMeshMirror = new THREE.Mesh(
-    new THREE.PlaneGeometry(2000, 2000, 100, 100), 
-    this.water.material
-  );
-  aMeshMirror.add(this.water);
-  aMeshMirror.rotation.x = - Math.PI * 0.5;
-  
-  this.object.add(aMeshMirror);
-
-
   // Create skybox
   this.skybox = (function(){
     var cubeMap = THREE.ImageUtils.loadTextureCube([
