@@ -10,7 +10,7 @@
         radius: 50,
         amount: 10
       };
-      this.data = data = _.defaults(data || {}, this.defaults);
+      this.data = _.defaults(data || {}, this.defaults);
 
       this.select = function(){
         scene.data.cursor.radius = this.data.radius;
@@ -21,6 +21,7 @@
         scene.data.cursor.visible = false;
       };
       this.mousemove = function(pos, terra, event){
+        scene.data.cursor.radius = that.data.radius;
         if(pos === undefined && that.activeInterval !== undefined){
           // mouse has left the terrain
           that.mouseup();
@@ -37,6 +38,12 @@
 
       this.mousedown = function(pos, terra, event){
         var raiseAtCursor = function(){
+          if(that.lastPos === undefined){
+            // Pause if not on terrain
+            that.mouseup();
+            that.stalled = true;
+            return false;
+          };
           var nearby = terra.nearbyVertices(that.lastPos, that.data.radius / terra.data.scale),
               vertices = terra.object.geometry.vertices;
           // Check for objects

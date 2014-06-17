@@ -1,16 +1,14 @@
 'use strict';
 
-snorb.core.Represent = function(data){
+snorb.core.Represent = function(terra, data){
   var that = this;
 
+  this.terra = terra;
+
   this.defaults = {
-    size: new THREE.Vector2(150, 100),
-    position: new THREE.Vector3(0, 0, 0),
-    scale: 10,
-    altitude: 100,
     objects: {}
   };
-  this.data = data = _.defaults(data || {}, this.defaults);
+  this.data = _.defaults(data || {}, this.defaults);
 
   this.register = function(polygon){
     return new snorb.core.Representation(that, {
@@ -21,7 +19,7 @@ snorb.core.Represent = function(data){
   // Method generator
   var filterObjects = function(testFunc){
     return function(p){
-      return _.filter(data.objects, function(obj){
+      return _.filter(that.data.objects, function(obj){
         return testFunc(p, obj);
       });
     };
@@ -34,6 +32,37 @@ snorb.core.Represent = function(data){
   this.checkPoint = filterObjects(function(point, obj){
     return window.polygon.pointInside(point, obj.polygon, true);
   });
+
+  this.prepareData = function(){
+    var output = _.clone(this.data);
+    output.objects = {};
+    _.each(this.data.objects, function(obj, key){
+      output.objects[key] = obj.prepareData();
+    });
+    return output;
+  };
+
+  // This method must be called after initialization do to back-references in terra
+  this.buildObjectsInData = function(){
+    var objects = _.clone(that.data.objects);
+    that.data.objects = {};
+    _.each(objects, function(obj, key){
+      terra.buildObject(obj);
+    });
+  };
+
+  this.reset = function(data){
+    // remove all current objects
+    _.each(this.data.objects, function(obj){
+      obj.remove();
+    });
+    if(data === undefined){
+      this.data = _.clone(this.defaults);
+    }else{
+      this.data = _.clone(data);
+      this.buildObjectsInData();
+    };
+  };
 
 };
 snorb.core.Represent.prototype = new snorb.core.State();

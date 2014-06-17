@@ -10,10 +10,10 @@
       this.defaults = {
         amount: 10
       };
-      this.data = data = _.defaults(data || {}, this.defaults);
+      this.data = _.defaults(data || {}, this.defaults);
 
       this.select = function(){
-        scene.data.cursor.radius = 20;
+        scene.data.cursor.radius = 10;
         scene.data.cursor.visible = true;
       };
       this.deselect = function(){

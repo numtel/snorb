@@ -17,9 +17,12 @@ snorb.core.Representation = function(parent, data){
 
     // Only have remove method if this is registered under a parent
     this.remove = function(){
+      if(this.destroy){
+        this.destroy.call(this);
+      };
       delete parent.data.objects[this.key];
     };
-  }
+  };
 
 };
 snorb.core.Representation.prototype = new snorb.core.State();

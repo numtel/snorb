@@ -58,8 +58,8 @@ snorb.core.Terra = function(scene, data){
         curLevel = coord.altitude;
     // Find current water level
     _.each(coord.objects, function(obj){
-      if(obj.type === 'water'){
-        curLevel = obj.altitude;
+      if(obj.data.type === 'water'){
+        curLevel = obj.data.altitude;
       };
     });
     var newLevel = curLevel + amount,
@@ -91,7 +91,7 @@ snorb.core.Terra = function(scene, data){
     var overlap = that.repres.checkPolygon(footprint),
         isOnlyWater = true;
     for(var i = 0; i<overlap.length; i++){
-      if(overlap[i].type !== 'water'){
+      if(overlap[i].data.type !== 'water'){
         isOnlyWater = false;
       };
     };
@@ -101,7 +101,6 @@ snorb.core.Terra = function(scene, data){
     var oldWater;
     while(overlap.length){
       oldWater = overlap.pop();
-      scene.object.remove(oldWater.mesh);
       oldWater.remove();
     };
    
@@ -116,9 +115,14 @@ snorb.core.Terra = function(scene, data){
     waterMesh.rotation.x = -Math.PI * 0.5;
     scene.object.add(waterMesh);
     var representation = that.repres.register(footprint);
-    representation.type = 'water';
     representation.mesh = waterMesh;
-    representation.altitude = newLevel;
+    representation.data.type = 'water';
+    representation.data.altitude = newLevel;
+    representation.data.depthAtPos = newLevel - coord.altitude;
+    representation.data.pos = pos.clone();
+    representation.destroy = function(){
+      scene.object.remove(this.mesh);
+    };
     return true;
   };
 
@@ -392,36 +396,81 @@ snorb.core.Terra = function(scene, data){
   setRepeat('texture_grass', 2);
   setRepeat('texture_bare', 2);
 
-  var geometry = new THREE.PlaneGeometry(
-    data.size.x * data.scale,
-    data.size.y * data.scale,
-    data.size.x,
-    data.size.y);
-  if(data.altitude instanceof Array){
-    for(var i = 0; i < geometry.vertices.length; i++){
-      geometry.vertices[i].z = data.altitude[i];
+  var geometry;
+
+  this.rebuildMesh = function(){
+    if(this.object){
+      scene.object.remove(this.object);
+      delete scene.terraMesh[scene.terraMesh.indexOf(this.object)];
     };
-  }else{
-    for(var i = 0; i < geometry.vertices.length; i++){
-      geometry.vertices[i].z = data.altitude;
+    geometry = new THREE.PlaneGeometry(
+      data.size.x * data.scale,
+      data.size.y * data.scale,
+      data.size.x,
+      data.size.y);
+    if(data.altitude instanceof Array){
+      for(var i = 0; i < geometry.vertices.length; i++){
+        geometry.vertices[i].z = data.altitude[i];
+      };
+    }else{
+      for(var i = 0; i < geometry.vertices.length; i++){
+        geometry.vertices[i].z = data.altitude;
+      };
     };
+    geometry.computeFaceNormals();
+    geometry.computeVertexNormals();
+
+    this.object = new THREE.Mesh(geometry, material);
+    this.object.rotation.x = -Math.PI / 2;
+    this.object.position.copy(data.position);
+    data.position = this.object.position;
+    this.object.dynamic = true;
+    this.object.receiveShadow = true;
+    this.object.castShadow = true;
+    this.object.terra = this;
+
+    scene.object.add(this.object);
+    scene.terraMesh.push(this.object);
   };
-  geometry.computeFaceNormals();
-  geometry.computeVertexNormals();
+  this.rebuildMesh();
 
+  this.prepareData = function(){
+    var output = _.clone(this.data);
+    output.altitude = [];
+    for(var i = 0; i<geometry.vertices.length; i++){
+      output.altitude.push(geometry.vertices[i].z);
+    };
 
-  this.object = new THREE.Mesh(geometry, material);
-  this.object.rotation.x = -Math.PI / 2;
-  this.object.position.copy(data.position);
-  this.object.dynamic = true;
-  this.object.receiveShadow = true;
-  this.object.castShadow = true;
-  this.object.terra = this;
+    output.repres = this.repres.prepareData();
+    return output;
+  };
 
-  scene.object.add(this.object);
-  scene.terra.push(this.object);
+  this.reset = function(data){
+    if(data){
+      this.repres.reset(data.repres);
+      delete data.repres;
+    }else{
+      this.repres.reset();
+      this.data = _.clone(this.defaults);
+    };
+    this.rebuildMesh();
+  };
 
-  this.repres = new snorb.core.Represent(data.repres);
+  this.destroy = function(){
+    // Remove all objects explicitly as some are not children of this mesh
+    this.repres.reset();
+  };
+
+  this.buildObject = function(data){
+    if(data.type === 'water'){
+      this.adjustWaterLevel(data.pos, data.depthAtPos);
+    }else{
+      console.log(data);
+    }
+  };
+
+  this.repres = new snorb.core.Represent(this, _.clone(data.repres));
+  this.repres.buildObjectsInData();
 
 };
 snorb.core.Terra.prototype = new snorb.core.State();

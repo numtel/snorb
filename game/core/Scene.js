@@ -134,7 +134,7 @@ snorb.core.Scene = function(domElementId, data){
   this.resize();
 
   // Tools
-  this.terra = [];
+  this.terraMesh = [];
   this.tools = {};
   _.each(snorb.tools, function(tool, toolKey){
     that.tools[toolKey] = new tool(that);
@@ -217,12 +217,12 @@ snorb.core.Scene = function(domElementId, data){
 
   var mouseHandler = function(specific){
     return function(event){
-      var point = that.mouseIntersect(event.clientX, event.clientY, that.terra),
+      var point = that.mouseIntersect(event.clientX, event.clientY, that.terraMesh),
           curTerra;
       if(point.length){
         curTerra = point[0].object.terra;
       };
-      _.each(that.terra, function(terraMesh){
+      _.each(that.terraMesh, function(terraMesh){
         if(curTerra !== terraMesh.terra){
           // Hide cursor on inactive terras
           terraMesh.terra.setCursor(undefined, false);
@@ -253,6 +253,57 @@ snorb.core.Scene = function(domElementId, data){
   _.each(['mousemove', 'mousedown', 'mouseup'], function(specific){
     that.domElement.addEventListener(specific, mouseHandler(specific), false);
   });
+
+  this.prepareData = function(){
+    var output = {
+      camera: {
+        position: this.data.camera.position.clone(),
+        center: this.data.camera.center.clone()
+      },
+      cursor: _.clone(this.data.cursor),
+      tools: {},
+      terra: []
+    }
+    _.each(this.tools, function(tool, key){
+      output.tools[key] = tool.prepareData();
+    });
+    _.each(this.terraMesh, function(terraMesh){
+      output.terra.push(terraMesh.terra.prepareData());
+    });
+    return output;
+  };
+
+  this.addTerra = function(data){
+    return new snorb.core.Terra(this, data);
+  };
+
+  this.reset = function(data){
+    var curTerra;
+    while(this.terraMesh.length){
+      curTerra = this.terraMesh.pop();
+      curTerra.terra.destroy();
+      that.object.remove(curTerra);
+    };
+    this.setTool(undefined);
+    that.data.cursor = _.clone(that.defaults.cursor);
+
+    if(data !== undefined){
+      _.each(data.tools, function(toolData, key){
+        that.tools[key].reset(toolData);
+      });
+      _.each(data.terra, function(terraData){
+        that.addTerra(terraData);
+      });
+      that.data.camera.position.copy(data.camera.position);
+      that.data.camera.center.copy(data.camera.center);
+    }else{
+      _.each(that.tools, function(tool, key){
+        tool.reset();
+      });
+      that.data.camera.position.copy(that.defaults.camera.position);
+      that.data.camera.center.copy(that.defaults.camera.center);
+    };
+  };
 
 };
 snorb.core.Scene.prototype = new snorb.core.State();
