@@ -277,6 +277,13 @@ snorb.core.Scene = function(domElementId, data){
     return new snorb.core.Terra(this, data);
   };
 
+  this.removeTerra = function(terra){
+    var index = this.terraMesh.indexOf(terra.object);
+    terra.destroy();
+    this.object.remove(terra.object);
+    this.terraMesh.splice(index, 1);
+  };
+
   this.reset = function(data){
     var curTerra;
     while(this.terraMesh.length){
