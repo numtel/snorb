@@ -2,10 +2,12 @@
 
 (function(){
 
-  var createWaterTool = function(ordinal){
+  var createWaterTool = function(label, ordinal){
     // ordinal is multiple on amount to change water level by
     var waterTool = function(scene, data){
       var that = this;
+
+      this.label = label;
 
       this.defaults = {
         amount: 10
@@ -168,7 +170,7 @@
     return waterTool;
   };
 
-  snorb.tools.waterRaise = createWaterTool(1);
-  snorb.tools.waterLower = createWaterTool(-1);
+  snorb.tools.waterRaise = createWaterTool('Raise Water', 1);
+  snorb.tools.waterLower = createWaterTool('Lower Water', -1);
 
 })();

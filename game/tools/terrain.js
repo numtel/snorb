@@ -1,10 +1,12 @@
 'use strict';
 (function(){
-  var createTerrainTool = function(ordinal){
+  var createTerrainTool = function(label, ordinal){
     // ordinal can be a multiplier on the default raise terrain equation
     // or pass a function(nearby, vertices){} as ordinal for custom operation
     var terrainTool = function(scene, data){
       var that = this;
+
+      this.label = label;
 
       this.defaults = {
         radius: 50,
@@ -97,24 +99,25 @@
     return terrainTool;
   };
 
-  snorb.tools.terrainRaise = createTerrainTool(1);
-  snorb.tools.terrainLower = createTerrainTool(-1);
-  snorb.tools.terrainSmooth = createTerrainTool(function(nearby, vertices){
-    var altitudes = [];
-    for(var r=0; r<nearby.length; r++){
-      for(var i=0; i<nearby[r].length; i++){
-        altitudes.push(vertices[nearby[r][i]].z);
+  snorb.tools.terrainRaise = createTerrainTool('Raise Terrain', 1);
+  snorb.tools.terrainLower = createTerrainTool('Lower Terrain', -1);
+  snorb.tools.terrainSmooth = createTerrainTool('Smooth Terrain', 
+    function(nearby, vertices){
+      var altitudes = [];
+      for(var r=0; r<nearby.length; r++){
+        for(var i=0; i<nearby[r].length; i++){
+          altitudes.push(vertices[nearby[r][i]].z);
+        };
       };
-    };
-    var averageAlt = _.reduce(altitudes, function(memo, num){
-        return memo + num;
-      }, 0) / altitudes.length;
-    for(var r = 0; r<nearby.length; r++){
-      for(var i = 0; i<nearby[r].length; i++){
-        vertices[nearby[r][i]].z -= (vertices[nearby[r][i]].z - averageAlt) 
-                                    * (1 / (r + 1));
+      var averageAlt = _.reduce(altitudes, function(memo, num){
+          return memo + num;
+        }, 0) / altitudes.length;
+      for(var r = 0; r<nearby.length; r++){
+        for(var i = 0; i<nearby[r].length; i++){
+          vertices[nearby[r][i]].z -= (vertices[nearby[r][i]].z - averageAlt) 
+                                      * (1 / (r + 1));
+        };
       };
-    };
-  });
+    });
 
 })();
