@@ -3,6 +3,8 @@
 snorb.core.Terra = function(scene, data){
   var that = this;
 
+  this.scene = scene;
+
   this.defaults = {
     size: new THREE.Vector2(150, 100),
     position: new THREE.Vector3(0, 0, 0),
@@ -29,103 +31,6 @@ snorb.core.Terra = function(scene, data){
 
 
   // Public Methods
-  this.adjustWaterLevel = function(pos, amount){
-    var findWaterSurfaceVertices = function(originIndex, waterAlt){
-      // use nearbyVertices to determine which vertices exist
-      // contiguously with the given water depth
-      var vertices = geometry.vertices,
-          insideIndent = [originIndex],
-          alreadyLooked = [],
-          curIndex, neighbors;
-      while(insideIndent.length > 0){
-        curIndex = insideIndent.pop();
-        alreadyLooked.push(curIndex);
-        neighbors = that.nearbyVertices(curIndex,1);
-        for(var i = 0; i<neighbors[0].length; i++){
-          if(vertices[neighbors[0][i]].z<waterAlt && 
-              alreadyLooked.indexOf(neighbors[0][i]) === -1 &&
-              insideIndent.indexOf(neighbors[0][i]) === -1){
-            insideIndent.push(neighbors[0][i]);
-          }else if(vertices[neighbors[0][i]].z>=waterAlt &&
-              alreadyLooked.indexOf(neighbors[0][i]) === -1){
-            alreadyLooked.push(neighbors[0][i]);
-          };
-        };
-      };
-      return alreadyLooked;
-    };
-    var coord = this.coord(pos),
-        curLevel = coord.altitude;
-    // Find current water level
-    _.each(coord.objects, function(obj){
-      if(obj.data.type === 'water'){
-        curLevel = obj.data.altitude;
-      };
-    });
-    var newLevel = curLevel + amount,
-        indentVertices = findWaterSurfaceVertices(coord.anyVI, newLevel),
-        convexHull = new ConvexHull(),
-        curV, allPoints = [],
-        waterShape = new THREE.Shape();
-
-    if(indentVertices.length < 2){
-      return;
-    };
-    
-    for(var i = 0; i<indentVertices.length; i++){
-      curV = geometry.vertices[indentVertices[i]];
-      allPoints.push({x: curV.x, y: curV.y});
-    };
-    convexHull.compute(allPoints);
-    var hullPoints = convexHull.getIndices(),
-        footprint = [];
-    for(var i = 0; i<hullPoints.length; i++){
-      curV = allPoints[hullPoints[i]];
-      footprint.push(new THREE.Vector2(curV.x, curV.y));
-      if(i === 0){
-        waterShape.moveTo(curV.x, curV.y);
-      } else {
-        waterShape.lineTo(curV.x, curV.y);
-      };
-    };
-    var overlap = that.repres.checkPolygon(footprint),
-        isOnlyWater = true;
-    for(var i = 0; i<overlap.length; i++){
-      if(overlap[i].data.type !== 'water'){
-        isOnlyWater = false;
-      };
-    };
-    if(!isOnlyWater){
-      return false;
-    };
-    var oldWater;
-    while(overlap.length){
-      oldWater = overlap.pop();
-      oldWater.remove();
-    };
-   
-    if(newLevel < coord.altitude){
-      return true;
-    };
- 
-    var waterGeometry = new THREE.ShapeGeometry(waterShape),
-        waterMesh = new THREE.Mesh(waterGeometry, scene.water.material);
-    waterMesh.position.y = newLevel;
-    waterMesh.add(scene.water.clone());
-    waterMesh.rotation.x = -Math.PI * 0.5;
-    scene.object.add(waterMesh);
-    var representation = that.repres.register(footprint);
-    representation.mesh = waterMesh;
-    representation.data.type = 'water';
-    representation.data.altitude = newLevel;
-    representation.data.depthAtPos = newLevel - coord.altitude;
-    representation.data.pos = pos.clone();
-    representation.destroy = function(){
-      scene.object.remove(this.mesh);
-    };
-    return true;
-  };
-
   this.coord = function(pos){
     var x = pos.x, y = pos.y,
         xR10 = x - (x % data.scale),
@@ -462,11 +367,7 @@ snorb.core.Terra = function(scene, data){
   };
 
   this.buildObject = function(data){
-    if(data.type === 'water'){
-      this.adjustWaterLevel(data.pos, data.depthAtPos);
-    }else{
-      console.log(data);
-    }
+    scene.tools[data.rebuildTool].rebuild(this, data);
   };
 
   this.repres = new snorb.core.Represent(this, _.clone(data.repres));
