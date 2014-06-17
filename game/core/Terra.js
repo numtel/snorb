@@ -132,7 +132,6 @@ snorb.core.Terra = function(scene, data){
     }else if(viSE !== undefined){
       anyVI = viSE;
     }
-    var objects = that.repres.checkPoint(pos);
     return {nw: viNW,
             ne: viNE,
             sw: viSW,
@@ -141,7 +140,7 @@ snorb.core.Terra = function(scene, data){
             propNS: propY,
             propWE: propX,
             altitude: altitude,
-            objects: objects};
+            objects: that.repres.checkPoint(pos)};
   };
 
   this.nearbyVertices=function(pos, radius){
@@ -367,8 +366,7 @@ snorb.core.Terra = function(scene, data){
   scene.object.add(this.object);
   scene.terra.push(this.object);
 
-  //TODO: what about the data?
-  this.repres = new snorb.core.Represent();
+  this.repres = new snorb.core.Represent(data.repres);
 
 };
 snorb.core.Terra.prototype = new snorb.core.State();
