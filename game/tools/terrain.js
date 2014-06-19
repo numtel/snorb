@@ -80,7 +80,9 @@
           }else{
             for(var r = 0; r<nearby.length; r++){
               for(var i = 0; i<nearby[r].length; i++){
-                vertices[nearby[r][i]].z += that.data.amount * (1 / (r + 1)) * ordinal;
+                vertices[nearby[r][i]].z += that.data.amount 
+                                              * ((nearby.length - r) / nearby.length) 
+                                              * ordinal;
                 if(vertices[nearby[r][i]].z > terra.data.maxAlt){
                   vertices[nearby[r][i]].z = terra.data.maxAlt;
                 }else if(vertices[nearby[r][i]].z < terra.data.minAlt){
@@ -123,7 +125,7 @@
       for(var r = 0; r<nearby.length; r++){
         for(var i = 0; i<nearby[r].length; i++){
           vertices[nearby[r][i]].z -= (vertices[nearby[r][i]].z - averageAlt) 
-                                      * (1 / (r + 1));
+                                      * ((nearby.length - r) / nearby.length);
         };
       };
     });

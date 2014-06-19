@@ -221,28 +221,8 @@ snorb.core.Scene = function(domElementId, data){
       if(point.length){
         curTerra = point[0].object.terra;
       };
-      if(event.shiftKey){
-        if(that.rotateWasEnabled === undefined){
-          that.rotateWasEnabled = !! that.controls.userRotate;
-        };
-        that.controls.userRotate = true;
-        if(curTerra && that.cursorWasVisible === undefined){
-          if(that.activeTool){
-            that.activeTool['mouseup'](undefined, curTerra, event);
-          };
-          that.cursorWasVisible = !! curTerra.isCursorVisible;
-          curTerra.setCursor(undefined, false);
-        };
+      if(specific === 'mousedown' && event.shiftKey){
         return false;
-      }else{
-        if(that.rotateWasEnabled !== undefined){
-          that.controls.userRotate = that.rotateWasEnabled;
-          that.rotateWasEnabled = undefined;
-          if(curTerra){
-            curTerra.setCursor(undefined, that.cursorWasVisible);
-            that.cursorWasVisible = undefined;
-          };
-        };
       };
       
       _.each(that.terraMesh, function(terraMesh){
@@ -264,7 +244,7 @@ snorb.core.Scene = function(domElementId, data){
           if(event.button === 2){
             if(specific === 'mousedown'){
               if(that.activeTool){
-                that.activeTool['mouseup'](terraPos, terraMesh.terra, event);
+                that.activeTool.mouseup.call(that.activeTool, terraPos, terraMesh.terra, event);
               };
               that.pan(terraPos, terraMesh.terra);
             };

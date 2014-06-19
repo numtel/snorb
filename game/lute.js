@@ -71,7 +71,7 @@ jQuery(function($){
           }
         }),
       toolSelector = $('<select id="active-tool" />')
-        .appendTo(panel)
+        .appendTo(actionBar)
         .on('change', function(){
           lute.setTool($(this).val());
           if(activeToolOptions){
