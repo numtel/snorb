@@ -330,6 +330,10 @@ snorb.core.Terra = function(scene, data){
     this.buildSides();
   };
 
+  this.isCursorVisible = function(){
+    return !! material.uniforms.show_ring.value;
+  };
+
   this.setCursor = function(pos, visible, radius, color){
     if(pos !== undefined){
       // Vec3
