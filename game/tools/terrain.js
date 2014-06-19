@@ -31,7 +31,7 @@
           return;
         };
         that.lastPos = pos;
-        if(that.stalled && pos){
+        if(that.stalled && pos && scene.mouseIsDown){
           // mouse has returned to the terrain
           that.mousedown(pos, terra, event);
         };
@@ -83,10 +83,8 @@
         };
         that.stalled = undefined;
         that.mouseup();
-        if(scene.mouseIsDown){
-          that.activeInterval = setInterval(raiseAtCursor, 100);
-          raiseAtCursor();
-        };
+        that.activeInterval = setInterval(raiseAtCursor, 100);
+        raiseAtCursor();
       };
       this.mouseup = function(pos, terra, event){
         if(that.activeInterval){

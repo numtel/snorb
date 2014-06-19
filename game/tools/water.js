@@ -50,34 +50,21 @@
         var newLevel = curLevel + amount;
 
         // Find the boundary of the water body
-        var indentVertices = findWaterSurfaceVertices(coord.anyVI, newLevel),
-            convexHull = new ConvexHull(),
-            curV, allPoints = [],
-            waterShape = new THREE.Shape();
+        var indentVertices = findWaterSurfaceVertices(coord.anyVI, newLevel);
 
         if(indentVertices.length < 2){
           return;
         };
-        
+       
+        var pointArray = [], curV; 
         for(var i = 0; i<indentVertices.length; i++){
           curV = terra.object.geometry.vertices[indentVertices[i]];
-          allPoints.push({x: curV.x, y: curV.y});
+          pointArray.push([curV.x, curV.y]);
         };
-        convexHull.compute(allPoints);
-        var hullPoints = convexHull.getIndices(),
-            footprint = [];
-        for(var i = 0; i<hullPoints.length; i++){
-          curV = allPoints[hullPoints[i]];
-          footprint.push(new THREE.Vector2(curV.x, curV.y));
-          if(i === 0){
-            waterShape.moveTo(curV.x, curV.y);
-          } else {
-            waterShape.lineTo(curV.x, curV.y);
-          };
-        };
+        var polygon = snorb.util.pointsToPolygon(pointArray, terra.data.scale * 2);
 
         // Check to see if space is vacant
-        var overlap = terra.repres.checkPolygon(footprint),
+        var overlap = terra.repres.checkPolygon(polygon),
             isOnlyWater = true;
         for(var i = 0; i<overlap.length; i++){
           if(overlap[i].data.type !== 'water'){
@@ -99,6 +86,14 @@
         };
     
         // Build Mesh 
+        var waterShape = new THREE.Shape();
+        for(var i = 0; i<polygon.length; i++){
+          if(i === 0){
+            waterShape.moveTo(polygon[i].x, polygon[i].y);
+          } else {
+            waterShape.lineTo(polygon[i].x, polygon[i].y);
+          };
+        };
         var waterGeometry = new THREE.ShapeGeometry(waterShape),
             waterMesh = new THREE.Mesh(waterGeometry, scene.water.material);
         waterMesh.position.y = newLevel;
@@ -108,7 +103,7 @@
         terra.scene.object.add(waterMesh);
 
         // Build representation
-        var representation = terra.repres.register(footprint);
+        var representation = terra.repres.register(polygon);
         representation.mesh = waterMesh;
         representation.data.type = 'water';
         representation.data.rebuildTool = 'waterRaise';
@@ -140,7 +135,7 @@
           return;
         };
         that.lastPos = pos;
-        if(that.stalled && pos){
+        if(that.stalled && pos && scene.mouseIsDown){
           // mouse has returned to the terrain
           that.stalled = undefined;
           that.mousedown(pos, terra, event);
@@ -154,10 +149,8 @@
           }
         };
         that.mouseup();
-        if(scene.mouseIsDown){
-          that.activeInterval = setInterval(raiseAtCursor, 100);
-          raiseAtCursor();
-        };
+        that.activeInterval = setInterval(raiseAtCursor, 100);
+        raiseAtCursor();
       };
       this.mouseup = function(pos, terra, event){
         if(that.activeInterval){
