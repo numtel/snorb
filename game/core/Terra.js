@@ -9,7 +9,9 @@ snorb.core.Terra = function(scene, data){
     size: new THREE.Vector2(150, 100),
     position: new THREE.Vector3(0, 0, 0),
     scale: 10,
-    altitude: 100
+    altitude: 100,
+    minAlt: 0,
+    maxAlt: 300
   };
   this.data = data = _.defaults(data || {}, this.defaults);
 

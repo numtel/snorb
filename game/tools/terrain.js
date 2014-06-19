@@ -14,6 +14,11 @@
       };
       this.data = _.defaults(data || {}, this.defaults);
 
+      this.fieldDefinitions = {
+        radius: {label: 'Radius', type: 'int', min: 5, max: 200},
+        amount: {label: 'Amount', type: 'int', min: 1, max: 20}
+      };
+
       this.select = function(){
         scene.data.cursor.radius = this.data.radius;
         scene.data.cursor.visible = true;
@@ -76,6 +81,11 @@
             for(var r = 0; r<nearby.length; r++){
               for(var i = 0; i<nearby[r].length; i++){
                 vertices[nearby[r][i]].z += that.data.amount * (1 / (r + 1)) * ordinal;
+                if(vertices[nearby[r][i]].z > terra.data.maxAlt){
+                  vertices[nearby[r][i]].z = terra.data.maxAlt;
+                }else if(vertices[nearby[r][i]].z < terra.data.minAlt){
+                  vertices[nearby[r][i]].z = terra.data.minAlt;
+               };
               };
             };
           }

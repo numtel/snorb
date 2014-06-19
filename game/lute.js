@@ -11,7 +11,8 @@ jQuery(function($){
   var filename = '',
       panel = $('<div id="panel" />'),
       actionBar = $('<div id="action-bar" />').appendTo(panel),
-      actionNew = $('<button><i class="fa fa-file-o"></i></button>').appendTo(actionBar)
+      actionNew = $('<button><i class="fa fa-file-o"></i></button>')
+        .appendTo(actionBar)
         .on('click', function(){
           var size=prompt('What size for map?', '100, 100');
           if(size === null){
@@ -39,7 +40,8 @@ jQuery(function($){
           toolSelector.trigger('change');
           filename='';
         }),
-      actionOpen = $('<button><i class="fa fa-folder-open-o"></i></button>').appendTo(actionBar)
+      actionOpen = $('<button><i class="fa fa-folder-open-o"></i></button>')
+        .appendTo(actionBar)
         .on('click', function(){
           var name = prompt('Please input the name you would like to open:');
           if(name!==null){
@@ -54,7 +56,8 @@ jQuery(function($){
             toolSelector.trigger('change');
           }
         }),
-      actionSave = $('<button><i class="fa fa-floppy-o"></i></button>').appendTo(actionBar)
+      actionSave = $('<button><i class="fa fa-floppy-o"></i></button>')
+        .appendTo(actionBar)
         .on('click', function(){
           var name = prompt('Please input the name you would like to save as:', filename);
           if(name!==null && name!==''){
@@ -67,10 +70,82 @@ jQuery(function($){
             filename = name;
           }
         }),
-      toolSelector = $('<select id="active-tool" />').appendTo(panel)
+      toolSelector = $('<select id="active-tool" />')
+        .appendTo(panel)
         .on('change', function(){
           lute.setTool($(this).val());
-        });
+          if(activeToolOptions){
+            activeToolOptions.remove();
+          }
+          activeToolOptions = buildToolOptions();
+          activeToolOptions.appendTo(panel);
+        }),
+      buildToolOptions = function(toolKey){
+        if(toolKey === undefined){
+          toolKey = toolSelector.val();
+        }
+        var optionPanel = $('<div class="tool-options" />'),
+            tool = lute.tools[toolKey],
+            activeRow, curEl;
+        for(var i in tool.fieldDefinitions){
+          if(tool.fieldDefinitions.hasOwnProperty(i) && 
+              typeof tool.fieldDefinitions[i] === 'object'){
+            activeRow = $('<label />').appendTo(optionPanel);
+            activeRow.append('<span>' + _.escape(tool.fieldDefinitions[i].label) + '</span>');
+            switch(tool.fieldDefinitions[i].type){
+              case 'int':
+                curEl = $(
+                  '<input type="range" min="' + _.escape(tool.fieldDefinitions[i].min) + '" ' +
+                  'max="' + _.escape(tool.fieldDefinitions[i].max) + '" step="1" value="' +
+                  _.escape(tool.fieldDefinitions[i].value) + '" name="' + _.escape(i) + '">');
+                curEl.on('change', function(){
+                  var optionName=$(this).attr('name'),
+                      newValue=parseInt($(this).val(),10);
+                  tool.data[optionName]=newValue;
+                  if(tool.optionChange){
+                    tool.optionChange.call(tool, optionName);  
+                  }
+                });
+                activeRow.append(curEl);
+                break;
+              case 'enum':
+                var enumValues = tool.fieldDefinitions[i].values;
+                if(typeof enumValues === 'function'){
+                  enumValues = enumValues.call(tool);
+                }
+                curEl = $('<select name="' + _.escape(i) + '" />');
+                for(var j in enumValues){
+                  if(enumValues.hasOwnProperty(j)){
+                    curEl.append('<option value="' + j + '"' + 
+                                (tool.data[i] === j ? ' selected' : '') +
+                                '>' + enumValues[j] + '</option>');
+                  }
+                }
+                curEl.on('change', function(){
+                  var optionName=$(this).attr('name'),
+                      newValue=$(this).val();
+                  tool.data[optionName]=newValue;
+                  if(tool.optionChange){
+                    tool.optionChange.call(tool, optionName);  
+                  }
+                }).trigger('change');
+                activeRow.append(curEl);
+                break;
+              case 'button':
+                curEl = $('<button name="' + _.escape(i) + '">' +
+                          tool.fieldDefinitions[i].label + '</button>');
+                curEl.on('click', function(){
+                  var optionName=$(this).attr('name');
+                  tool.fieldDefinitions[optionName].click.call(tool);
+                });
+                activeRow.empty().append(curEl);
+                break;
+            }
+          }
+        }
+        return optionPanel;
+      },
+      activeToolOptions;
   // Add tools to selector
   _.each(lute.tools, function(tool, key){
     toolSelector.append('<option value="' + _.escape(key) + '"' +

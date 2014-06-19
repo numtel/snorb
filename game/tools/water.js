@@ -14,6 +14,10 @@
       };
       this.data = _.defaults(data || {}, this.defaults);
 
+      this.fieldDefinitions = {
+        amount: {label: 'Amount', type: 'int', min: 1, max: 20}
+      };
+
       this.adjustWaterLevel = function(terra, pos, amount){
         var findWaterSurfaceVertices = function(originIndex, waterAlt){
           // use nearbyVertices to determine which vertices exist
