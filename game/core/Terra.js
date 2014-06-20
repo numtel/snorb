@@ -56,28 +56,14 @@ snorb.core.Terra = function(scene, data){
         side: THREE.BackSide,
         wireframe:false}),
       vertices = geometry.vertices,
-      sidePoints, sideWaterPoints, curV, inWater,
-      newSides = [], curSide, curSideMesh, curWaterSide, curWaterMesh;
+      sidePoints, curV, 
+      newSides = [], curSide, curSideMesh;
     for(var i=0;i<sideRanges.length;i++){
       // determine points on this side
       sidePoints = [];
-      sideWaterPoints = [];
-      inWater = false;
       for(var v=sideRanges[i][0];v<sideRanges[i][1];v+=sideRanges[i][2]){
         curV = vertices[v];
         sidePoints.push({x:curV[sideRanges[i][3]],y:curV.z});
-        /*if(curV.waterAlt){
-          if(!inWater){
-            sideWaterPoints.push([]);
-          }
-          sideWaterPoints[sideWaterPoints.length-1].push({
-            x:curV[sideRanges[i][3]],
-            y: curV.waterAlt ? curV.waterAlt : curV.z,
-            z: curV.z});
-          inWater = true;
-        }else{
-          inWater=false;
-        }*/
       };
       if(sideRanges[i][3] === 'y'){
         sidePoints.push({x:-that.data.size.y * that.data.scale / 2 * sideRanges[i][5], 
@@ -89,7 +75,7 @@ snorb.core.Terra = function(scene, data){
                          y: that.data.minAlt});
         sidePoints.push({x:that.data.size.x * that.data.scale / 2 * sideRanges[i][5], 
                          y: that.data.minAlt});
-      }
+      };
       // build main side skirt
       curSide = new THREE.Shape();
       for(var h = 0; h<sidePoints.length; h++){
@@ -98,8 +84,8 @@ snorb.core.Terra = function(scene, data){
           curSide.moveTo(curV.x, curV.y);
         } else {
           curSide.lineTo(curV.x, curV.y);
-        }
-      }
+        };
+      };
       curSideMesh = new THREE.Mesh(new THREE.ShapeGeometry(curSide), sideMaterial);
       that.object.add(curSideMesh);
       curSideMesh.rotation.x=Math.PI/2;
@@ -108,40 +94,9 @@ snorb.core.Terra = function(scene, data){
         curSideMesh.position.x=-that.data.size.x * that.data.scale / 2 * sideRanges[i][4];
       }else{
         curSideMesh.position.y=that.data.size.y * that.data.scale / 2 * sideRanges[i][4];
-      }
+      };
       newSides.push(curSideMesh);
-/*
-      //build each water side skirt
-      for(var w = 0; w<sideWaterPoints.length; w++){
-        curWaterSide = new THREE.Shape();
-        for(var h = 0; h<sideWaterPoints[w].length; h++){
-          curV = sideWaterPoints[w][h];
-          if(h === 0){
-            curWaterSide.moveTo(curV.x, curV.y);
-          } else {
-            curWaterSide.lineTo(curV.x, curV.y);
-          }
-        }
-        for(var h = sideWaterPoints[w].length-1; h>-1; h--){
-          curV = sideWaterPoints[w][h];
-          if(curV.z<curV.y){
-            curWaterSide.lineTo(curV.x, curV.z);
-          }
-        }
-        curWaterMesh = new THREE.Mesh(new THREE.ShapeGeometry(curWaterSide), waterMaterial);
-        ground.add(curWaterMesh);
-        curWaterMesh.rotation.x=Math.PI/2;
-        if(sideRanges[i][3]==='y'){
-          curWaterMesh.rotation.y=Math.PI/2;
-          curWaterMesh.position.x=-groundParams.w/2*sideRanges[i][4];
-          curWaterMesh.position.x+=0.01*sideRanges[i][4];
-        }else{
-          curWaterMesh.position.y=groundParams.w/2*sideRanges[i][4];
-          curWaterMesh.position.y-=0.01*sideRanges[i][4];
-        }
-        newSides.push(curWaterMesh);
-      }*/
-    }
+    };
     // add bottom
     curSideMesh = new THREE.Mesh(
       new THREE.PlaneGeometry(that.data.size.x * that.data.scale,
@@ -153,8 +108,8 @@ snorb.core.Terra = function(scene, data){
     if(that.sides){
       for(var i=0;i<that.sides.length;i++){
         that.object.remove(that.sides[i]);
-      }
-    }
+      };
+    };
     that.sides = newSides;
   };
 

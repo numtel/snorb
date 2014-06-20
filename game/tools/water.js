@@ -9,6 +9,13 @@
 
       this.label = label;
 
+      this.sideSkirtMaterial = new THREE.MeshBasicMaterial({
+        color: new THREE.Color(0x334337),
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.8
+      });
+
       this.defaults = {
         amount: 10
       };
@@ -90,8 +97,40 @@
         };
     
         // Build Mesh 
-        var waterShape = new THREE.Shape();
+        var waterShape = new THREE.Shape(),
+            onEdge = false, cEdge, edges = [],
+            adjAttr, cCoord, cAlt, hasOnEdge;
+        var sideParams = [
+          {attr: 'y', val: terra.data.size.y * terra.data.scale / 2},
+          {attr: 'y', val: -terra.data.size.y * terra.data.scale / 2},
+          {attr: 'x', val: terra.data.size.x * terra.data.scale / 2},
+          {attr: 'x', val: -terra.data.size.x * terra.data.scale / 2},
+        ];
         for(var i = 0; i<polygon.length; i++){
+          hasOnEdge = false;
+          for(var k = 0; k<sideParams.length; k++){
+            if(polygon[i][sideParams[k].attr] === sideParams[k].val){
+              hasOnEdge = true;
+              adjAttr = sideParams[k].attr === 'x' ? 'y' : 'x';
+              cCoord = terra.coord(polygon[i]);
+              if(cCoord.altitude > newLevel){
+                cAlt = newLevel;
+              }else{
+                cAlt = cCoord.altitude;
+              };
+              if(!onEdge){
+                cEdge = { side: k, shape: new THREE.Shape() };
+                onEdge = true;
+                cEdge.shape.moveTo(polygon[i][adjAttr], cAlt);
+              }else{
+                cEdge.shape.lineTo(polygon[i][adjAttr], cAlt);
+              };
+            };
+          };
+          if(!hasOnEdge && onEdge){
+            edges.push(cEdge);
+            onEdge = false;
+          };
           if(i === 0){
             waterShape.moveTo(polygon[i].x, polygon[i].y);
           } else {
@@ -105,6 +144,22 @@
         waterMesh.add(terra.scene.water.clone());
         waterMesh.rotation.x = -Math.PI * 0.5;
         terra.scene.object.add(waterMesh);
+
+        // Build side skirt if necessary
+        var skirtMesh, curSide;
+        for(var i = 0; i<edges.length; i++){
+          skirtMesh = new THREE.Mesh(new THREE.ShapeGeometry(edges[i].shape),
+                                     that.sideSkirtMaterial);
+          curSide = sideParams[edges[i].side];
+          skirtMesh.rotation.x = Math.PI/2;
+          if(curSide.val > 0){
+            skirtMesh.position[curSide.attr] = curSide.val - 0.01;
+          }else{
+            skirtMesh.position[curSide.attr] = curSide.val + 0.01;
+          };
+          skirtMesh.position.z = -newLevel;
+          waterMesh.add(skirtMesh);
+        };
 
         // Build representation
         var representation = terra.repres.register(polygon);
