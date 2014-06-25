@@ -10,6 +10,7 @@ jQuery(function($){
   // Build simple UI
   var filename = '',
       panel = $('<div id="panel" />'),
+      loading = $('#loading'),
       actionBar = $('<div id="action-bar" />').appendTo(panel),
       actionNew = $('<button><i class="fa fa-file-o"></i></button>')
         .appendTo(actionBar)
@@ -34,11 +35,15 @@ jQuery(function($){
           }else{
             alert('Invalid input!');
             return;
-          }
-          lute.reset();
-          lute.addTerra({size: {x:size[0], y:size[1]}});
-          toolSelector.trigger('change');
-          filename='';
+          };
+          loading.show();
+          setTimeout(function(){
+            lute.reset();
+            lute.addTerra({size: {x:size[0], y:size[1]}});
+            toolSelector.trigger('change');
+            filename='';
+            loading.hide();
+          },0);
         }),
       actionOpen = $('<button><i class="fa fa-folder-open-o"></i></button>')
         .appendTo(actionBar)
@@ -49,12 +54,16 @@ jQuery(function($){
             if(data === null){
               alert('No save exists with that name. Please try again.');
               return;
-            }
-            filename = name;
-            var parsedData = JSON.parse(data);
-            lute.reset(parsedData);
-            toolSelector.trigger('change');
-          }
+            };
+            loading.show();
+            setTimeout(function(){
+              filename = name;
+              var parsedData = JSON.parse(data);
+              lute.reset(parsedData);
+              toolSelector.trigger('change');
+              loading.hide();
+            },0);
+          };
         }),
       actionSave = $('<button><i class="fa fa-floppy-o"></i></button>')
         .appendTo(actionBar)
@@ -164,4 +173,6 @@ jQuery(function($){
   // Build initial options panel
   toolSelector.trigger('change');
   panel.appendTo('body');
+
+  loading.hide();
 });
