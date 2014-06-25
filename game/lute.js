@@ -70,6 +70,15 @@ jQuery(function($){
             filename = name;
           }
         }),
+      actionHelp = $('<button><i class="fa fa-question"></i></button>')
+        .appendTo(actionBar)
+        .on('click', function(){
+          alert(['Right Click - Center View on Map',
+                 'Mouse Wheel - Zoom',
+                 'Shift - Rotate View Temporarily',
+                 '',
+                 'Games are saved in local storage.'].join('\n'));
+        }),
       toolSelector = $('<select id="active-tool" />')
         .appendTo(actionBar)
         .on('change', function(){
