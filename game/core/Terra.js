@@ -44,17 +44,10 @@ snorb.core.Terra = function(scene, data){
         that.data.size.x+1, 'y', -1, 1]],
       sideMaterial = new THREE.MeshBasicMaterial({
         color: new THREE.Color(0x333333),
-        side: THREE.DoubleSide,
-        wireframe:false}),
-      waterMaterial = new THREE.MeshBasicMaterial({
-        color: new THREE.Color(0x334337),
-        side: THREE.DoubleSide,
-        transparent: true,
-        opacity:0.8}),
+        side: THREE.DoubleSide}),
       bottomMaterial = new THREE.MeshBasicMaterial({
         color: new THREE.Color(0x111111),
-        side: THREE.BackSide,
-        wireframe:false}),
+        side: THREE.BackSide}),
       vertices = geometry.vertices,
       sidePoints, curV, 
       newSides = [], curSide, curSideMesh;

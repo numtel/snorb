@@ -97,40 +97,8 @@
         };
     
         // Build Mesh 
-        var waterShape = new THREE.Shape(),
-            onEdge = false, cEdge, edges = [],
-            adjAttr, cCoord, cAlt, hasOnEdge;
-        var sideParams = [
-          {attr: 'y', val: terra.data.size.y * terra.data.scale / 2},
-          {attr: 'y', val: -terra.data.size.y * terra.data.scale / 2},
-          {attr: 'x', val: terra.data.size.x * terra.data.scale / 2},
-          {attr: 'x', val: -terra.data.size.x * terra.data.scale / 2},
-        ];
+        var waterShape = new THREE.Shape();
         for(var i = 0; i<polygon.length; i++){
-          hasOnEdge = false;
-          for(var k = 0; k<sideParams.length; k++){
-            if(polygon[i][sideParams[k].attr] === sideParams[k].val){
-              hasOnEdge = true;
-              adjAttr = sideParams[k].attr === 'x' ? 'y' : 'x';
-              cCoord = terra.coord(polygon[i]);
-              if(cCoord.altitude > newLevel){
-                cAlt = newLevel;
-              }else{
-                cAlt = cCoord.altitude;
-              };
-              if(!onEdge){
-                cEdge = { side: k, shape: new THREE.Shape() };
-                onEdge = true;
-                cEdge.shape.moveTo(polygon[i][adjAttr], cAlt);
-              }else{
-                cEdge.shape.lineTo(polygon[i][adjAttr], cAlt);
-              };
-            };
-          };
-          if(!hasOnEdge && onEdge){
-            edges.push(cEdge);
-            onEdge = false;
-          };
           if(i === 0){
             waterShape.moveTo(polygon[i].x, polygon[i].y);
           } else {
@@ -145,13 +113,69 @@
         waterMesh.rotation.x = -Math.PI * 0.5;
         terra.scene.object.add(waterMesh);
 
+        // Locate polygon vertices on edges for skirts
+        var onEdge = false, cEdge, edges = [],
+            adjAttr, cCoord, cAlt, hasOnEdge;
+        var sideParams = [
+          {attr: 'y', val: terra.data.size.y * terra.data.scale / 2,
+           rotation: {x: Math.PI / 2}},
+          {attr: 'y', val: -terra.data.size.y * terra.data.scale / 2,
+           rotation: {x: Math.PI / 2}},
+          {attr: 'x', val: terra.data.size.x * terra.data.scale / 2,
+           rotation: {y: Math.PI / 2, z: Math.PI / 2}},
+          {attr: 'x', val: -terra.data.size.x * terra.data.scale / 2,
+           rotation: {y: Math.PI / 2, z: Math.PI / 2}}
+        ];
+        for(var k = 0; k<sideParams.length; k++){
+          cEdge = { side: k, shape: new THREE.Shape() };
+          for(var i = 0; i<polygon.length; i++){
+            if(polygon[i][sideParams[k].attr] === sideParams[k].val){
+              adjAttr = sideParams[k].attr === 'x' ? 'y' : 'x';
+              cCoord = terra.coord(polygon[i]);
+              if(cCoord.altitude > newLevel){
+                cAlt = newLevel;
+              }else{
+                cAlt = cCoord.altitude;
+              };
+              if(cEdge.shape.actions.length === 0){
+                if(Math.abs(polygon[i][adjAttr]) === 
+                    terra.data.size[adjAttr] * terra.data.scale / 2 &&
+                   cAlt < newLevel){
+                  cEdge.shape.moveTo(polygon[i][adjAttr], newLevel);
+                  cEdge.shape.lineTo(polygon[i][adjAttr], cAlt);
+                }else{
+                  cEdge.shape.moveTo(polygon[i][adjAttr], cAlt);
+                };
+              }else{
+                if(Math.abs(polygon[i][adjAttr]) === 
+                    terra.data.size[adjAttr] * terra.data.scale / 2 &&
+                   cEdge.shape.actions[cEdge.shape.actions.length -1].args[1] === newLevel){
+                  cEdge.shape.lineTo(polygon[i][adjAttr], newLevel);
+                  cEdge.shape.lineTo(polygon[i][adjAttr], cAlt);
+                }else{
+                  cEdge.shape.lineTo(polygon[i][adjAttr], cAlt);
+                  if(Math.abs(polygon[i][adjAttr]) === 
+                      terra.data.size[adjAttr] * terra.data.scale / 2 &&
+                     cAlt < newLevel){
+                    cEdge.shape.lineTo(polygon[i][adjAttr], newLevel);
+                  };
+                };
+              };
+            };
+          };
+          if(cEdge.shape.actions.length > 0){
+            edges.push(cEdge);
+          };
+        };
         // Build side skirt if necessary
         var skirtMesh, curSide;
         for(var i = 0; i<edges.length; i++){
           skirtMesh = new THREE.Mesh(new THREE.ShapeGeometry(edges[i].shape),
                                      that.sideSkirtMaterial);
           curSide = sideParams[edges[i].side];
-          skirtMesh.rotation.x = Math.PI/2;
+          _.each(curSide.rotation, function(val, key){
+            skirtMesh.rotation[key] = val;
+          });
           if(curSide.val > 0){
             skirtMesh.position[curSide.attr] = curSide.val - 0.01;
           }else{
