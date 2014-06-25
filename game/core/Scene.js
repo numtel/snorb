@@ -10,7 +10,8 @@ snorb.core.Scene = function(domElementId, data){
     },
     cursor: {
       radius: 100,
-      visible: false
+      visible: false,
+      color: new THREE.Vector4(0.0, 0.0, 0.7, 1.0)
     }
   };
   this.data = data = _.defaults(data || {}, this.defaults);
@@ -258,8 +259,10 @@ snorb.core.Scene = function(domElementId, data){
               that.activeTool[specific](terraPos, terraMesh.terra, event);
             };
           };
-          terraMesh.terra.setCursor(terraPos, that.data.cursor.visible,
-                                    that.data.cursor.radius);
+          terraMesh.terra.setCursor(terraPos,
+                                    that.data.cursor.visible,
+                                    that.data.cursor.radius,
+                                    that.data.cursor.color);
         };
       });
     };

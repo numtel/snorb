@@ -10,7 +10,8 @@
 
       this.defaults = {
         radius: 50,
-        amount: 10
+        amount: 10,
+        disabledCursorColor: new THREE.Vector4(0.7, 0.0, 0.0, 1.0)
       };
       this.data = _.defaults(data || {}, this.defaults);
 
@@ -27,15 +28,51 @@
         that.mouseup();
         scene.data.cursor.visible = false;
       };
+      this.stall = function(){
+        that.mouseup();
+        scene.data.cursor.color = that.data.disabledCursorColor;
+        that.stalled = true;
+      };
+      this.checkNearby = function(pos, terra){
+        var nearby = terra.nearbyVertices(pos, that.data.radius / terra.data.scale),
+            vertices = terra.object.geometry.vertices;
+        // Check for objects
+        var allPoints = [], polygon = [],
+            convexHull = new ConvexHull();
+        for(var r = 0; r<nearby.length; r++){
+          for(var i = 0; i<nearby[r].length; i++){
+            allPoints.push(new THREE.Vector2(
+              vertices[nearby[r][i]].x, vertices[nearby[r][i]].y));
+          };
+        };
+        convexHull.compute(allPoints);
+        var hullPoints = convexHull.getIndices();
+        for(var i = 0; i<hullPoints.length; i++){
+          polygon.push(allPoints[hullPoints[i]].clone());
+        };
+        var overlap = terra.repres.checkPolygon(polygon);
+
+        if(overlap.length === 0){
+          return nearby;
+        }else{
+          return false;
+        };
+          
+      };
+
       this.mousemove = function(pos, terra, event){
         scene.data.cursor.radius = that.data.radius;
         if(pos === undefined && that.activeInterval !== undefined){
           // mouse has left the terrain
-          that.mouseup();
-          that.stalled = true;
+          that.stall();
           return;
         };
         that.lastPos = pos;
+        if(pos && that.checkNearby(pos, terra) === false){
+          scene.data.cursor.color = that.data.disabledCursorColor;
+        }else{
+          scene.data.cursor.color = scene.defaults.cursor.color;
+        };
         if(that.stalled && pos && scene.mouseIsDown){
           // mouse has returned to the terrain
           that.mousedown(pos, terra, event);
@@ -46,32 +83,15 @@
         var raiseAtCursor = function(){
           if(that.lastPos === undefined){
             // Pause if not on terrain
-            that.mouseup();
-            that.stalled = true;
-            return false;
+            that.stall();
+            return;
           };
-          var nearby = terra.nearbyVertices(that.lastPos, that.data.radius / terra.data.scale),
+          var nearby = that.checkNearby(that.lastPos, terra),
               vertices = terra.object.geometry.vertices;
-          // Check for objects
-          var allPoints = [], polygon = [],
-              convexHull = new ConvexHull();
-          for(var r = 0; r<nearby.length; r++){
-            for(var i = 0; i<nearby[r].length; i++){
-              allPoints.push(new THREE.Vector2(
-                vertices[nearby[r][i]].x, vertices[nearby[r][i]].y));
-            };
-          };
-          convexHull.compute(allPoints);
-          var hullPoints = convexHull.getIndices();
-          for(var i = 0; i<hullPoints.length; i++){
-            polygon.push(allPoints[hullPoints[i]].clone());
-          };
-          var overlap = terra.repres.checkPolygon(polygon);
-          if(overlap.length){
+          if(nearby === false){
             // Pause if overlapping anything
-            that.mouseup();
-            that.stalled = true;
-            return false;
+            that.stall();
+            return;
           };
           
           // Perform operation
@@ -94,6 +114,7 @@
           terra.updateVertices();
         };
         that.stalled = undefined;
+        scene.data.cursor.color = scene.defaults.cursor.color;
         that.mouseup();
         that.activeInterval = setInterval(raiseAtCursor, 100);
         raiseAtCursor();
