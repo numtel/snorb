@@ -49,6 +49,7 @@ snorb.core.Scene = function(domElementId, data){
   this.camera.lookAt(data.camera.center);
 
   this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
+  this.controls.scene = this; // For getting access to the height data
   data.camera.center = this.controls.center;
   data.camera.position = this.camera.position;
   
@@ -136,6 +137,7 @@ snorb.core.Scene = function(domElementId, data){
 
   // Tools
   this.terraMesh = [];
+  this.curTerra = undefined;
   this.tools = {};
   _.each(snorb.tools, function(tool, toolKey){
     that.tools[toolKey] = new tool(that);
@@ -220,7 +222,7 @@ snorb.core.Scene = function(domElementId, data){
       var point = that.mouseIntersect(event.clientX, event.clientY, that.terraMesh),
           curTerra;
       if(point.length){
-        curTerra = point[0].object.terra;
+        that.curTerra = curTerra = point[0].object.terra;
       };
       if(specific === 'mousedown' && event.shiftKey){
         return false;
