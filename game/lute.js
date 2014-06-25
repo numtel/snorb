@@ -97,7 +97,7 @@ jQuery(function($){
                 curEl = $(
                   '<input type="range" min="' + _.escape(tool.fieldDefinitions[i].min) + '" ' +
                   'max="' + _.escape(tool.fieldDefinitions[i].max) + '" step="1" value="' +
-                  _.escape(tool.fieldDefinitions[i].value) + '" name="' + _.escape(i) + '">');
+                  _.escape(tool.data[i]) + '" name="' + _.escape(i) + '">');
                 curEl.on('change', function(){
                   var optionName=$(this).attr('name'),
                       newValue=parseInt($(this).val(),10);
