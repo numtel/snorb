@@ -204,11 +204,11 @@
       };
 
       this.select = function(){
-        scene.data.cursor.radius = 10;
-        scene.data.cursor.visible = true;
+        scene.data.cursorRadius = 10;
+        scene.data.cursorVisible = true;
       };
       this.deselect = function(){
-        scene.data.cursor.visible = false;
+        scene.data.cursorVisible = false;
       };
       this.mousemove = function(pos, terra, event){
         if(pos === undefined && that.activeInterval !== undefined){

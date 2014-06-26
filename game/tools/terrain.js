@@ -21,16 +21,17 @@
       };
 
       this.select = function(){
-        scene.data.cursor.radius = this.data.radius;
-        scene.data.cursor.visible = true;
+        scene.data.cursorRadius = this.data.radius;
+        scene.data.cursorColor.copy(scene.defaults.cursorColor);
+        scene.data.cursorVisible = true;
       };
       this.deselect = function(){
         that.mouseup();
-        scene.data.cursor.visible = false;
+        scene.data.cursorVisible = false;
       };
       this.stall = function(){
         that.mouseup();
-        scene.data.cursor.color = that.data.disabledCursorColor;
+        scene.data.cursorColor.copy(that.data.disabledCursorColor);
         that.stalled = true;
       };
       this.checkNearby = function(pos, terra){
@@ -61,7 +62,7 @@
       };
 
       this.mousemove = function(pos, terra, event){
-        scene.data.cursor.radius = that.data.radius;
+        scene.data.cursorRadius = that.data.radius;
         if(pos === undefined && that.activeInterval !== undefined){
           // mouse has left the terrain
           that.stall();
@@ -69,9 +70,9 @@
         };
         that.lastPos = pos;
         if(pos && that.checkNearby(pos, terra) === false){
-          scene.data.cursor.color = that.data.disabledCursorColor;
+          scene.data.cursorColor.copy(that.data.disabledCursorColor);
         }else{
-          scene.data.cursor.color = scene.defaults.cursor.color;
+          scene.data.cursorColor.copy(scene.defaults.cursorColor);
         };
         if(that.stalled && pos && scene.mouseIsDown){
           // mouse has returned to the terrain
@@ -114,7 +115,7 @@
           terra.updateVertices();
         };
         that.stalled = undefined;
-        scene.data.cursor.color = scene.defaults.cursor.color;
+        scene.data.cursorColor.copy(scene.defaults.cursorColor);
         that.mouseup();
         that.activeInterval = setInterval(raiseAtCursor, 100);
         raiseAtCursor();

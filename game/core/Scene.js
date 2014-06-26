@@ -4,17 +4,14 @@ snorb.core.Scene = function(domElementId, data){
   var that = this;
 
   this.defaults = {
-    camera: {
-      position: new THREE.Vector3(-500, 500, 500),
-      center: new THREE.Vector3(0, 100, 0)
-    },
-    cursor: {
-      radius: 100,
-      visible: false,
-      color: new THREE.Vector4(0.0, 0.0, 0.7, 1.0)
-    }
+    cameraPosition: new THREE.Vector3(-500, 500, 500),
+    cameraCenter: new THREE.Vector3(0, 100, 0),
+    cursorRadius: 100,
+    cursorVisible: false,
+    cursorColor: new THREE.Vector4(0.0, 0.0, 0.7, 1.0)
   };
   this.data = data = _.defaults(data || {}, this.defaults);
+  this.data.cursorColor = this.data.cursorColor.clone();
 
   this.supportWebGL = function(){
     try{
@@ -45,13 +42,13 @@ snorb.core.Scene = function(domElementId, data){
 
   var aspectRatio = window.innerWidth / window.innerHeight;
   this.camera = new THREE.PerspectiveCamera(55, aspectRatio, 0.5, 3000000);
-  this.camera.position.copy(data.camera.position);
-  this.camera.lookAt(data.camera.center);
+  this.camera.position.copy(data.cameraPosition);
+  this.camera.lookAt(data.cameraCenter);
 
   this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
   this.controls.scene = this; // For getting access to the height data
-  data.camera.center = this.controls.center;
-  data.camera.position = this.camera.position;
+  data.cameraCenter = this.controls.center;
+  data.cameraPosition = this.camera.position;
   
   // Add light
   var directionalLight = new THREE.DirectionalLight(0xffffff, 1);
@@ -162,12 +159,12 @@ snorb.core.Scene = function(domElementId, data){
         activePanInterval = undefined;
       }
       var prop = 1,
-          origObject = {x: that.data.camera.position.x,
-                        y: that.data.camera.position.y,
-                        z: that.data.camera.position.z},
-          origCenter = {x: that.data.camera.center.x,
-                        y: that.data.camera.center.y,
-                        z: that.data.camera.center.z},
+          origObject = {x: that.data.cameraPosition.x,
+                        y: that.data.cameraPosition.y,
+                        z: that.data.cameraPosition.z},
+          origCenter = {x: that.data.cameraCenter.x,
+                        y: that.data.cameraCenter.y,
+                        z: that.data.cameraCenter.z},
           animFunction = function(){
             var nowPosition = new THREE.Vector3(0, 0, 0),
                 nowCenter = new THREE.Vector3(0, 0, 0);
@@ -194,9 +191,9 @@ snorb.core.Scene = function(domElementId, data){
       animFunction();
       activePanInterval = setInterval(animFunction, 30);
     };
-    animatePan({x: terra.object.position.x + pos.x - this.data.camera.center.x,
-               y: terra.object.position.y + pos.z - this.data.camera.center.y,
-               z: terra.object.position.z - pos.y - this.data.camera.center.z});
+    animatePan({x: terra.object.position.x + pos.x - this.data.cameraCenter.x,
+               y: terra.object.position.y + pos.z - this.data.cameraCenter.y,
+               z: terra.object.position.z - pos.y - this.data.cameraCenter.z});
   };
 
 
@@ -262,9 +259,9 @@ snorb.core.Scene = function(domElementId, data){
             };
           };
           terraMesh.terra.setCursor(terraPos,
-                                    that.data.cursor.visible,
-                                    that.data.cursor.radius,
-                                    that.data.cursor.color);
+                                    that.data.cursorVisible,
+                                    that.data.cursorRadius,
+                                    that.data.cursorColor);
         };
       });
     };
@@ -274,15 +271,10 @@ snorb.core.Scene = function(domElementId, data){
   });
 
   this.prepareData = function(){
-    var output = {
-      camera: {
-        position: this.data.camera.position.clone(),
-        center: this.data.camera.center.clone()
-      },
-      cursor: _.clone(this.data.cursor),
-      tools: {},
-      terra: []
-    }
+    var output = _.clone(this.data);
+    output.tools = {};
+    output.terra = [];
+
     _.each(this.tools, function(tool, key){
       output.tools[key] = tool.prepareData();
     });
@@ -311,7 +303,7 @@ snorb.core.Scene = function(domElementId, data){
       that.object.remove(curTerra);
     };
     this.setTool(undefined);
-    that.data.cursor = _.clone(that.defaults.cursor);
+    that.data.cursorVisible = false;
 
     if(data !== undefined){
       _.each(data.tools, function(toolData, key){
@@ -320,14 +312,18 @@ snorb.core.Scene = function(domElementId, data){
       _.each(data.terra, function(terraData){
         that.addTerra(terraData);
       });
-      that.data.camera.position.copy(data.camera.position);
-      that.data.camera.center.copy(data.camera.center);
+      if(data.cameraPosition){
+        that.data.cameraPosition.copy(data.cameraPosition);
+      };
+      if(data.cameraCenter){
+        that.data.cameraCenter.copy(data.cameraCenter);
+      };
     }else{
       _.each(that.tools, function(tool, key){
         tool.reset();
       });
-      that.data.camera.position.copy(that.defaults.camera.position);
-      that.data.camera.center.copy(that.defaults.camera.center);
+      that.data.cameraPosition.copy(that.defaults.cameraPosition);
+      that.data.cameraCenter.copy(that.defaults.cameraCenter);
     };
   };
 
