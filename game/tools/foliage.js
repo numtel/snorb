@@ -136,21 +136,22 @@
 
     this.loadedMaterials = {};
     this.buildMesh = function(type){
-      var typeInfo = this.types[type],
-          material, mesh;
-      if(this.loadedMaterials.hasOwnProperty(type)){
-        material = this.loadedMaterials[type];
-      }else{
-        material = this.loadedMaterials[type] = new THREE.MeshBasicMaterial({
-          map: THREE.ImageUtils.loadTexture('textures/foliage/' + typeInfo.texture),
+      var typeInfo = this.types[type];
+      var material = this.loadedMaterials[type] = new THREE.ShaderMaterial({
+          uniforms: {
+            texture: {type: 't', value: THREE.ImageUtils.loadTexture(
+                      'textures/foliage/' + typeInfo.texture)},
+            highlight: {type: 'v3', value: new THREE.Vector3(0.0, 0.0, 0.0)}
+          },
+          vertexShader: snorb.util.shader('foliageVertex'),
+          fragmentShader: snorb.util.shader('foliageFragment'),
           side: THREE.DoubleSide,
           transparent: true
         });
-      };
       var scale = 1 + ((Math.random() - 0.5) * typeInfo.sizeRandomness),
           w = scale * typeInfo.width,
-          h = scale * typeInfo.height;
-      mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), material);
+          h = scale * typeInfo.height,
+          mesh = new THREE.Mesh(new THREE.PlaneGeometry(w, h), material);
       mesh.add(mesh.clone());
       mesh.rotation.x = Math.PI/2;
       mesh.children[0].rotation.y = Math.PI / 2;
@@ -196,6 +197,12 @@
       representation.data.type = data.type;
       representation.destroy = function(){
         terra.object.remove(this.mesh);
+      };
+      representation.highlight = function(color){
+        if(color === undefined){
+          color = new THREE.Vector3(0,0,0);
+        };
+        mesh.material.uniforms.highlight.value.copy(color);
       };
     };
 
