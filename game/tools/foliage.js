@@ -166,8 +166,16 @@
         {x: data.pos.x + typeInfo.radius, y: data.pos.y - typeInfo.radius}
       ];
 
-      var overlap = terra.repres.checkPolygon(polygon);
-      if(overlap.length > 0){
+      var overlap = terra.repres.checkPolygon(polygon),
+          landClear = true;
+      for(var i = 0; i<overlap.length; i++){
+        if(overlap[i].data.type !== 'water' ||
+           data.pos.z < overlap[i].data.altitude){
+          landClear = false;
+          break;
+        };
+      };
+      if(landClear === false){
         return false
       };
 
