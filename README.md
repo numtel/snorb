@@ -8,3 +8,4 @@ Tested in Chrome/Firefox on Ubuntu
 Goals:
 * Terrain building system for city building game
 
+![Screenshot](http://i.imgur.com/gXynulg.jpg "Screenshot with trees, mountains, water")
