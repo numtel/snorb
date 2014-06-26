@@ -116,6 +116,10 @@
           var treePos = that.lastPos.clone();
           treePos.x += that.data.radius * 1.5 * (Math.random() - 0.5);
           treePos.y += that.data.radius * 1.5 * (Math.random() - 0.5);
+          if(Math.abs(treePos.x) > terra.data.size.x * terra.data.scale / 2 ||
+             Math.abs(treePos.y) > terra.data.size.y * terra.data.scale / 2){
+            continue;
+          };
           var coord = terra.coord(treePos);
           treePos.z = coord.altitude;
           that.rebuild(terra, {
