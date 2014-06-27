@@ -14,6 +14,9 @@ varying vec2 vUv;
 varying vec3 vPosition;
 varying vec3 vLightFront;
 varying vec3 vNormal;
+
+varying float foliageDensity;
+
 THREE.ShaderChunk['shadowmap_pars_fragment']
 
 float dist_falloff(float distance, float falloff) {
@@ -48,14 +51,14 @@ void main(){
                          dist_falloff(1.0 - vNormal.z,0.5));
   // Dirt texture
   fragcolor = layerColor(fragcolor, diffuseBare,
-                          dist_falloff(abs(vPosition.z),75.0));
+                          dist_falloff(foliageDensity,300.0));
   // Snow texture
   fragcolor = layerColor(fragcolor, diffuseSnow,
                           dist_falloff(200.0 - vPosition.z,50.0));
   
-  
-  //gl_FragColor = vec4(0.5, 0.2, 1.0, 1.0);
   gl_FragColor=vec4(fragcolor, 1.0);
+
+  //gl_FragColor = vec4(0.5, 0.2, 1.0, 1.0);
   gl_FragColor.xyz = gl_FragColor.xyz * vLightFront;
   THREE.ShaderChunk['shadowmap_fragment']
 
