@@ -368,11 +368,16 @@ snorb.core.Terra = function(scene, data){
       ring_radius: { type: 'f', value: 50.0 }
     },
     attributes: {
+      foliage: { type: 'f', value: [] }
     },
     vertexShader: snorb.util.shader('groundVertex'),
     fragmentShader: snorb.util.shader('groundFragment'),
     lights: true
   });
+  var vertexCount = (this.data.size.x + 1) * (this.data.size.y + 1);
+  for(var i=0; i<vertexCount; i++){
+    material.attributes.foliage.value.push(0);
+  };
   var setRepeat = function(textureKey, value){
     material.uniforms[textureKey].value.repeat.set(value * data.size.x / 100,
                                                    value * data.size.y / 100);

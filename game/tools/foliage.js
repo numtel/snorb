@@ -123,7 +123,7 @@
           var coord = terra.coord(treePos);
           treePos.z = coord.altitude;
           that.rebuild(terra, {
-            type: that.data.type,
+            foliageType: that.data.type,
             pos: treePos
           });
         };
@@ -159,7 +159,7 @@
     };
 
     this.rebuild = function(terra, data){
-      var typeInfo = that.types[data.type];
+      var typeInfo = that.types[data.foliageType];
       var polygon = [
         {x: data.pos.x - typeInfo.radius, y: data.pos.y - typeInfo.radius},
         {x: data.pos.x - typeInfo.radius, y: data.pos.y + typeInfo.radius},
@@ -180,7 +180,7 @@
         return false
       };
 
-      var mesh = that.buildMesh(data.type);
+      var mesh = that.buildMesh(data.foliageType);
       mesh.position.copy(data.pos);
       mesh.geometry.computeBoundingBox();
       mesh.position.z -= mesh.geometry.boundingBox.min.y;
@@ -194,9 +194,10 @@
       representation.data.type = 'foliage';
       representation.data.rebuildTool = 'foliage';
       representation.data.pos = data.pos;
-      representation.data.type = data.type;
+      representation.data.foliageType = data.foliageType;
       representation.destroy = function(){
         terra.object.remove(this.mesh);
+        that.prepareToUpdateTerra(terra);
       };
       representation.highlight = function(color){
         if(color === undefined){
@@ -204,6 +205,8 @@
         };
         mesh.material.uniforms.highlight.value.copy(color);
       };
+
+      that.prepareToUpdateTerra(terra);
     };
 
     this.mouseup = function(pos, terra, event){
@@ -212,6 +215,39 @@
         delete that.activeInterval;
       }
     };
+
+    this.activeUpdateTimer = undefined;
+    this.prepareToUpdateTerra = function(terra){
+      if(that.activeUpdateTimer){
+        clearTimeout(that.activeUpdateTimer);
+      };
+      that.activeUpdateTimer = setTimeout(function(){
+        that.updateTerraAttribute(terra);
+        that.activeUpdateTimer = undefined;
+      }, 1000);
+    };
+
+    this.updateTerraAttribute = function(terra){
+      var densityWorker = new Worker("game/workers/foliageDensity.js");
+      densityWorker.onmessage = function(event){
+        for(var i = 0; i<event.data.length; i++){
+          terra.object.material.attributes.foliage.value[i] = event.data[i];
+        };
+        terra.object.material.attributes.foliage.needsUpdate = true;
+      };
+      var allFoliage = [];
+      _.each(terra.repres.data.objects, function(obj){
+        if(obj.data.type === 'foliage'){
+          allFoliage.push(obj.data.pos);
+        };
+      });
+      densityWorker.postMessage({
+        terraData: terra.data,
+        foliage: allFoliage
+      });
+    };
+
+
   };
   snorb.tools.foliage.prototype = new snorb.core.Tool();
 
