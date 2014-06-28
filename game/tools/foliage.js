@@ -134,10 +134,9 @@
       raiseAtCursor();
     };
 
-    this.loadedMaterials = {};
     this.buildMesh = function(type){
       var typeInfo = this.types[type];
-      var material = this.loadedMaterials[type] = new THREE.ShaderMaterial({
+      var material = new THREE.ShaderMaterial({
           uniforms: {
             texture: {type: 't', value: THREE.ImageUtils.loadTexture(
                       'textures/foliage/' + typeInfo.texture)},
