@@ -182,6 +182,30 @@ snorb.core.Terra = function(scene, data){
             objects: that.repres.checkPoint(pos)};
   };
 
+
+  this.coveredVertices = function(mesh){
+    var output = [],
+        curV, cPos, coord;
+    for(var i = 0; i<mesh.geometry.vertices.length; i++){
+      curV = mesh.geometry.vertices[i];
+      cPos = mesh.localToWorld(curV.clone());
+      coord = this.coord(new THREE.Vector2(cPos.x, cPos.y));
+      if(coord.nw !== undefined && output.indexOf(coord.nw) === -1){
+        output.push(coord.nw);
+      };
+      if(coord.ne !== undefined && output.indexOf(coord.ne) === -1){
+        output.push(coord.ne);
+      };
+      if(coord.sw !== undefined && output.indexOf(coord.sw) === -1){
+        output.push(coord.sw);
+      };
+      if(coord.se !== undefined && output.indexOf(coord.se) === -1){
+        output.push(coord.se);
+      };
+    };
+    return output;
+  };
+
   this.nearbyVertices=function(pos, radius){
     var originIndex;
     if(typeof pos === 'number'){

@@ -211,7 +211,18 @@ snorb.core.Scene = function(domElementId, data){
       return ray.intersectObjects(object);
     }else{
       return ray.intersectObject(object);
-    }
+    };
+  };
+
+  this.mouse3D = function(x,y, toDimension, toValue){
+    var vector = new THREE.Vector3(
+        ( x / window.innerWidth ) * 2 - 1,
+        - ( y / window.innerHeight ) * 2 + 1,
+        0.5 );
+    this.projector.unprojectVector(vector, this.camera);
+    var dir = vector.sub(this.camera.position).normalize();
+    var distance = (toValue - this.camera.position[toDimension]) / dir[toDimension];
+    return this.camera.position.clone().add(dir.multiplyScalar(distance));
   };
 
   var mouseHandler = function(specific){
@@ -285,7 +296,11 @@ snorb.core.Scene = function(domElementId, data){
   };
 
   this.addTerra = function(data){
-    return new snorb.core.Terra(this, data);
+    var terra = new snorb.core.Terra(this, data);
+    if(this.curTerra === undefined){
+      this.curTerra = terra;
+    };
+    return terra;
   };
 
   this.removeTerra = function(terra){
@@ -293,6 +308,9 @@ snorb.core.Scene = function(domElementId, data){
     terra.destroy();
     this.object.remove(terra.object);
     this.terraMesh.splice(index, 1);
+    if(this.curTerra === terra){
+      this.curTerra = undefined;
+    };
   };
 
   this.reset = function(data){
@@ -325,23 +343,6 @@ snorb.core.Scene = function(domElementId, data){
       that.data.cameraPosition.copy(that.defaults.cameraPosition);
       that.data.cameraCenter.copy(that.defaults.cameraCenter);
     };
-  };
-
-  this.debugBox = function(pos, color){
-    if(color === undefined){
-      color = 0x00ff00;
-    };
-    var mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(5,5,5),
-      new THREE.MeshBasicMaterial({
-        color: new THREE.Color(color),
-        transparent: true,
-        opacity: 0.5
-      })
-    );
-    mesh.position.copy(pos);
-    this.object.add(mesh);
-    return mesh;
   };
 
 };

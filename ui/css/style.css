@@ -6,6 +6,9 @@ body {
 	overflow: hidden;
   font-family:sans-serif;
 }
+#game canvas {
+  cursor: default;
+}
 #debug {
   position:absolute;
   bottom:0;
