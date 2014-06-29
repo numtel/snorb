@@ -46,8 +46,8 @@
         radius: 5
       },
       'poplar': {
-        label: 'Spruce Tree',
-        texture: 'spruce.png',
+        label: 'Poplar Tree',
+        texture: 'poplar.png',
         width: 100 * 0.3,
         height: 191 * 0.3,
         sizeRandomness: 0.75,
