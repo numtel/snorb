@@ -6,14 +6,25 @@
     this.label = 'Build Path';
 
     this.defaults = {
+      pathColor: 0x0000ff,
+      pathErrorColor: 0xff0000,
       horizHandleColor: 0xff0000,
       horizHandleGrabbedColor: 0x00ff00,
       horizHandleGap: 10,
       verticalHandleColor: 0xff00ff,
       verticalHandleGrabbedColor: 0xffff00,
-      verticalHandleGap: 20,
+      verticalHandleGap: 30,
+      maxAltitudeDisplacement: 50,
+      pathHeight: 5,
+      pathWidth: 10
     };
     this.data = _.defaults(data || {}, this.defaults);
+
+    this.fieldDefinitions = {
+      construct: {label: 'Construct', type: 'button', click: function(){
+        this.finalize();
+      }}
+    };
 
     this.select = function(){
       scene.data.cursorRadius = scene.curTerra.data.scale;
@@ -90,6 +101,8 @@
       if(that.draggingNew){
         that.draggingNew = undefined;
         if(that.startPos === that.endPos){
+          that.underConstruction = undefined;
+          that.updateTerraAttributes(terra);
           return;
         };
         that.handles = [
@@ -157,11 +170,40 @@
       }else if(that.handleGrabbed){
         that.handleGrabbed = undefined;
         that.buildPreview(terra);
-        var coveredVertices = terra.coveredVertices(that.underConstruction);
-        for(var i = 0; i<coveredVertices.length; i++){
-          terra.object.material.attributes.foliage.value[coveredVertices[i]] = 1000;
+      };
+    };
+
+    this.generatePolygon = function(){
+      if(that.underConstruction){
+        var terra = that.underConstruction.parent.terra;
+        var pointArray = [], curV;
+        for(var i = 0; i<that.underConstruction.geometry.vertices.length; i++){
+          curV = that.underConstruction.geometry.vertices[i];
+          pointArray.push(new THREE.Vector2(curV.x, curV.y));
         };
-        terra.object.material.attributes.foliage.needsUpdate = true;
+        return snorb.util.pointsToPolygon(pointArray, terra.data.scale * 2);
+      };
+    };
+
+    this.finalize = function(){
+      if(that.underConstruction){
+        var terra = that.underConstruction.parent.terra;
+        for(var i = 0; i<that.handles.length; i++){
+          terra.object.remove(that.handles[i]);
+        };
+        var vertices = terra.object.geometry.vertices,
+            attr = terra.object.material.attributes;
+        for(var i = 0; i<vertices.length; i++){
+          if(attr.displacement.value[i] > 0 && attr.translucent.value[i] > 0.9){
+            vertices[i].z -= attr.displacement.value[i];
+          };
+          attr.displacement.value[i] = 0;
+          attr.translucent.value[i] = 1;
+        };
+        attr.displacement.needsUpdate = true;
+        attr.translucent.needsUpdate = true;
+        terra.updateVertices();
+        that.underConstruction = undefined;
       };
     };
 
@@ -211,14 +253,15 @@
                    Math.sqrt(Math.pow(endPos.x - midPos.x, 2) +
                              Math.pow(endPos.y - midPos.y, 2));
       if(length < terra.data.scale){
+        that.updateTerraAttributes(terra);
         return;
       };
       var spline = new THREE.SplineCurve3([startPos, midPos, endPos]);
       var shape = new THREE.Shape([
-        new THREE.Vector2(0, -5),
-        new THREE.Vector2(5, -5),
-        new THREE.Vector2(5, 5),
-        new THREE.Vector2(0, 5)
+        new THREE.Vector2(0, -that.data.pathWidth / 2),
+        new THREE.Vector2(that.data.pathHeight, -that.data.pathWidth / 2),
+        new THREE.Vector2(that.data.pathHeight, that.data.pathWidth / 2),
+        new THREE.Vector2(0, that.data.pathWidth / 2)
       ]);
       var geometry = new THREE.ExtrudeGeometry(shape, {
         steps: Math.round(length/terra.data.scale),
@@ -226,11 +269,51 @@
         extrudePath: spline
       });
       var mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({
-          color: 0x0000ff
+          color: that.data.pathColor
       }));
       mesh.position.z += 5;
       terra.object.add(mesh);
       that.underConstruction = mesh;
+      that.updateTerraAttributes(terra);
+      that.polygon = that.generatePolygon();
+      var overlap = terra.repres.checkPolygon(that.polygon);
+      if(overlap.length){
+        mesh.material.color = new THREE.Color(that.data.pathErrorColor);
+      };
+    };
+
+    this.updateTerraAttributes = function(terra){
+      for(var i = 0; i<terra.object.geometry.vertices.length; i++){
+        terra.object.material.attributes.displacement.value[i] = 0;
+        terra.object.material.attributes.translucent.value[i] = 1;
+      };
+      if(that.underConstruction){
+        var coveredVertices = terra.coveredVertices(that.underConstruction),
+            curV, curCoord, attrVal;
+        for(var i = 0; i<coveredVertices.meshCoords.length; i++){
+          curV = that.underConstruction.geometry.vertices[i];
+          curCoord = coveredVertices.meshCoords[i];
+          if(curV.z < curCoord.altitude){
+            // Do some landscaping...
+            _.each(['nw','ne','sw','se'], function(ord){
+              if(curCoord[ord]){
+                attrVal = terra.object.geometry.vertices[curCoord[ord]].z - curV.z;
+                terra.object.material.attributes.displacement.value[curCoord[ord]] = attrVal;
+              };
+            });
+            if(curV.z < curCoord.altitude - that.data.maxAltitudeDisplacement){
+              // Go underground!
+              _.each(['nw','ne','sw','se'], function(ord){
+                if(curCoord[ord]){
+                  terra.object.material.attributes.translucent.value[curCoord[ord]] = 0.3;
+                };
+              });
+            };
+          };
+        };
+      };
+      terra.object.material.attributes.displacement.needsUpdate = true;
+      terra.object.material.attributes.translucent.needsUpdate = true;
     };
 
   };

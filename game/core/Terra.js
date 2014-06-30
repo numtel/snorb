@@ -185,25 +185,20 @@ snorb.core.Terra = function(scene, data){
 
   this.coveredVertices = function(mesh){
     var output = [],
+        allCoords = [],
         curV, cPos, coord;
     for(var i = 0; i<mesh.geometry.vertices.length; i++){
       curV = mesh.geometry.vertices[i];
       cPos = mesh.localToWorld(curV.clone());
       coord = this.coord(new THREE.Vector2(cPos.x, cPos.y));
-      if(coord.nw !== undefined && output.indexOf(coord.nw) === -1){
-        output.push(coord.nw);
-      };
-      if(coord.ne !== undefined && output.indexOf(coord.ne) === -1){
-        output.push(coord.ne);
-      };
-      if(coord.sw !== undefined && output.indexOf(coord.sw) === -1){
-        output.push(coord.sw);
-      };
-      if(coord.se !== undefined && output.indexOf(coord.se) === -1){
-        output.push(coord.se);
-      };
+      allCoords.push(coord);
+      _.each(['nw','ne','sw','se'], function(ord){
+        if(coord[ord] !== undefined && output.indexOf(coord[ord]) === -1){
+          output.push(coord[ord]);
+        };
+      });
     };
-    return output;
+    return {terraIndices: output, meshCoords: allCoords};
   };
 
   this.nearbyVertices=function(pos, radius){
@@ -392,15 +387,20 @@ snorb.core.Terra = function(scene, data){
       ring_radius: { type: 'f', value: 50.0 }
     },
     attributes: {
-      foliage: { type: 'f', value: [] }
+      foliage: { type: 'f', value: [] },
+      displacement: { type: 'f', value: [] },
+      translucent: { type: 'f', value: [] }
     },
     vertexShader: snorb.util.shader('groundVertex'),
     fragmentShader: snorb.util.shader('groundFragment'),
-    lights: true
+    lights: true,
+    transparent: true
   });
   var vertexCount = (this.data.size.x + 1) * (this.data.size.y + 1);
   for(var i=0; i<vertexCount; i++){
     material.attributes.foliage.value.push(0);
+    material.attributes.displacement.value.push(0);
+    material.attributes.translucent.value.push(1);
   };
   var setRepeat = function(textureKey, value){
     material.uniforms[textureKey].value.repeat.set(value * data.size.x / 100,

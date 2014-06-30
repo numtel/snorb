@@ -5,7 +5,10 @@ varying vec3 vLightFront;
 varying vec3 vNormal;
 
 attribute float foliage;
-varying float foliageDensity;
+varying float vFoliage;
+attribute float displacement;
+attribute float translucent;
+varying float vTranslucent;
 
 THREE.ShaderChunk['lights_lambert_pars_vertex']
 THREE.ShaderChunk['shadowmap_pars_vertex']
@@ -15,7 +18,9 @@ void main( void ) {
   vUv = uv;
   vPosition = position;
   vNormal = normal;
-  foliageDensity = foliage;
+  vFoliage = foliage;
+  vTranslucent = translucent;
+  vPosition.z -= displacement;
   vec3 transformedNormal = normalize( normalMatrix * normal );
   THREE.ShaderChunk['lights_lambert_vertex']
   THREE.ShaderChunk['shadowmap_vertex']
