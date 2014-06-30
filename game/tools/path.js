@@ -6,8 +6,7 @@
     this.label = 'Build Path';
 
     this.defaults = {
-      pathColor: 0x0000ff,
-      pathErrorColor: 0xff0000,
+      pathErrorHighlight: new THREE.Vector3(1,0,0),
       horizHandleColor: 0xff0000,
       horizHandleGrabbedColor: 0x00ff00,
       horizHandleGap: 10,
@@ -40,6 +39,8 @@
     };
 
     this.underConstruction;
+    this.handleGrabbed;
+    this.draggingNew = false;
     this.handles = [];
 
     this.mousemove = function(pos, terra, event){
@@ -50,17 +51,19 @@
         if(handleIntersect.length){
           if(!that.handleGrabbed){
             for(var i=0; i<that.handles.length; i++){
-              that.handles[i].material.color.copy(new THREE.Color(that.handles[i].staticColor));
+              that.handles[i].material.color.copy(
+                new THREE.Color(that.handles[i].staticColor));
             };
             that.handleGrabbed = handleIntersect[0].object;
-            that.handleGrabbed.material.color.copy(new THREE.Color(that.handleGrabbed.grabbedColor));
+            that.handleGrabbed.material.color.copy(
+              new THREE.Color(that.handleGrabbed.grabbedColor));
           };
         }else{
           for(var i=0; i<that.handles.length; i++){
             that.handles[i].material.color.copy(new THREE.Color(that.handles[i].staticColor));
           };
           if(that.handleGrabbed){
-            delete that.handleGrabbed;
+            that.handleGrabbed = undefined;
           };
         };
       };
@@ -79,7 +82,8 @@
           event.clientX, event.clientY, that.underConstruction.children);
         if(handleIntersect.length){
           that.handleGrabbed = handleIntersect[0].object;
-          that.handleGrabbed.material.color.copy(new THREE.Color(that.handleGrabbed.grabbedColor));
+          that.handleGrabbed.material.color.copy(
+            new THREE.Color(that.handleGrabbed.grabbedColor));
         };
       };
       if(that.handleGrabbed === undefined && that.lastPos){
@@ -95,6 +99,11 @@
     };
 
     this.rebuild = function(terra, data){
+      _.each(['startPos','midPos','endPos'], function(whichPos){
+        that[whichPos] = data[whichPos];
+      });
+      that.buildPreview(terra);
+      that.finalize();
     };
 
     this.mouseup = function(pos, terra, event){
@@ -203,6 +212,28 @@
         attr.displacement.needsUpdate = true;
         attr.translucent.needsUpdate = true;
         terra.updateVertices();
+
+        var mesh = that.underConstruction.clone();
+        terra.object.add(mesh);
+        terra.object.remove(that.underConstruction);
+
+        var representation = terra.repres.register(that.polygon);
+        representation.mesh = mesh;
+        representation.data.type = 'path';
+        representation.data.rebuildTool = 'path';
+        representation.data.startPos = that.startPos;
+        representation.data.midPos = that.midPos;
+        representation.data.endPos = that.endPos;
+        representation.destroy = function(){
+          terra.object.remove(this.mesh);
+        };
+        representation.highlight = function(color){
+          if(color === undefined){
+            color = new THREE.Vector3(0,0,0);
+          };
+          mesh.material.uniforms.highlight.value.copy(color);
+        };
+
         that.underConstruction = undefined;
       };
     };
@@ -241,10 +272,11 @@
         midPos.z = coord.altitude;
         that.midPos = midPos;
       }else{
-        midPos = that.midPos.clone();
+        midPos = new THREE.Vector3().copy(that.midPos);
       };
-      var curGrabbed;
+      var curGrabbed, material;
       if(that.underConstruction){
+        material = that.underConstruction.material;
         terra.object.remove(that.underConstruction);
         that.underConstruction = undefined;
       };
@@ -268,9 +300,18 @@
         bevelEnabled: false,
         extrudePath: spline
       });
-      var mesh = new THREE.Mesh(geometry, new THREE.MeshLambertMaterial({
-          color: that.data.pathColor
-      }));
+      if(material === undefined){
+        material = new THREE.ShaderMaterial({
+          uniforms: {
+            texture: {type: 't', value: THREE.ImageUtils.loadTexture(
+                      'textures/path/road.png')},
+            highlight: {type: 'v3', value: new THREE.Vector3(0.0, 0.0, 0.0)}
+          },
+          vertexShader: snorb.util.shader('pathVertex'),
+          fragmentShader: snorb.util.shader('pathFragment')
+        });
+      };
+      var mesh = new THREE.Mesh(geometry, material);
       mesh.position.z += 5;
       terra.object.add(mesh);
       that.underConstruction = mesh;
@@ -278,7 +319,9 @@
       that.polygon = that.generatePolygon();
       var overlap = terra.repres.checkPolygon(that.polygon);
       if(overlap.length){
-        mesh.material.color = new THREE.Color(that.data.pathErrorColor);
+        mesh.material.uniforms.highlight.value.copy(that.data.pathErrorHighlight);
+      }else{
+        mesh.material.uniforms.highlight.value.copy(new THREE.Vector3(0,0,0));
       };
     };
 
