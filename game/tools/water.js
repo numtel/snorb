@@ -108,9 +108,7 @@
         var waterGeometry = new THREE.ShapeGeometry(waterShape),
             waterMesh = new THREE.Mesh(waterGeometry, scene.water.material);
         waterMesh.position.z = newLevel;
-        //waterMesh.position.add(terra.object.position);
         waterMesh.add(terra.scene.water.clone());
-        //waterMesh.rotation.x = -Math.PI * 0.5;
         terra.object.add(waterMesh);
 
         // Locate polygon vertices on edges for skirts
