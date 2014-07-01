@@ -107,11 +107,11 @@
         };
         var waterGeometry = new THREE.ShapeGeometry(waterShape),
             waterMesh = new THREE.Mesh(waterGeometry, scene.water.material);
-        waterMesh.position.y = newLevel;
-        waterMesh.position.add(terra.object.position);
+        waterMesh.position.z = newLevel;
+        //waterMesh.position.add(terra.object.position);
         waterMesh.add(terra.scene.water.clone());
-        waterMesh.rotation.x = -Math.PI * 0.5;
-        terra.scene.object.add(waterMesh);
+        //waterMesh.rotation.x = -Math.PI * 0.5;
+        terra.object.add(waterMesh);
 
         // Locate polygon vertices on edges for skirts
         var onEdge = false, cEdge, edges = [],
@@ -188,6 +188,7 @@
         // Build representation
         var representation = terra.repres.register(polygon);
         representation.mesh = waterMesh;
+        waterMesh.representation = representation;
         representation.data.type = 'water';
         representation.data.rebuildTool = 'waterRaise';
         representation.data.altitude = newLevel;
@@ -196,6 +197,7 @@
         representation.destroy = function(){
           terra.scene.object.remove(this.mesh);
         };
+        terra.updateRenderDepth();
         return true;
       };
 

@@ -33,6 +33,31 @@ snorb.core.Terra = function(scene, data){
 
 
   // Public Methods
+  this.updateRenderDepth=function(){
+    var waterDistances = [],
+        curChild,
+        distance;
+    for(var i=0; i<this.object.children.length; i++){
+      curChild = this.object.children[i];
+      if(curChild.representation && curChild.representation.data.type === 'water'){
+        distance = Math.sqrt(
+          Math.pow(curChild.position.x - scene.data.cameraPosition.x, 2) +
+          Math.pow(curChild.position.y - scene.data.cameraPosition.z, 2)
+        );
+        waterDistances.push({d: distance, i: i});
+      };
+    };
+    var waterSorted = _.sortBy(waterDistances, 'd');
+    // Ground is furthest
+    this.object.renderDepth = waterSorted.length + 1;
+    // Then the water
+    for(var i=0; i<waterSorted.length; i++){
+      this.object.children[waterSorted[i].i].renderDepth = waterSorted.length - i;
+    };
+    // Seems to work fine just sorting ground and water, no need for all objects
+  };
+
+
   this.buildSides=function(){
     var sideRanges = [
       [0, that.data.size.x+1, 1, 'x', 1, -1],
