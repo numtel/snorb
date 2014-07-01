@@ -290,16 +290,32 @@
       };
       var spline = new THREE.SplineCurve3([startPos, midPos, endPos]);
       var shape = new THREE.Shape([
-        new THREE.Vector2(0, -that.data.pathWidth / 2),
-        new THREE.Vector2(that.data.pathHeight, -that.data.pathWidth / 2),
-        new THREE.Vector2(that.data.pathHeight, that.data.pathWidth / 2),
-        new THREE.Vector2(0, that.data.pathWidth / 2)
+        new THREE.Vector2(-that.data.pathWidth / 2, 0),
+        new THREE.Vector2(-that.data.pathWidth / 2, that.data.pathHeight),
+        new THREE.Vector2(that.data.pathWidth / 2, that.data.pathHeight),
+        new THREE.Vector2(that.data.pathWidth / 2, 0)
       ]);
       var geometry = new THREE.ExtrudeGeometry(shape, {
         steps: Math.round(length/terra.data.scale),
         bevelEnabled: false,
         extrudePath: spline
       });
+      // TODO: Generalized the following temporary fix for paths that are
+      //       extruded in a rotation
+      if(Math.abs(Math.round(geometry.vertices[2].z - geometry.vertices[1].z)) 
+          > that.data.pathHeight){
+        shape = new THREE.Shape([
+          new THREE.Vector2(0, -that.data.pathWidth / 2, 0),
+          new THREE.Vector2(that.data.pathHeight, -that.data.pathWidth / 2),
+          new THREE.Vector2(that.data.pathHeight, that.data.pathWidth / 2),
+          new THREE.Vector2(0, that.data.pathWidth / 2)
+        ]);
+        geometry = new THREE.ExtrudeGeometry(shape, {
+          steps: Math.round(length/terra.data.scale),
+          bevelEnabled: false,
+          extrudePath: spline
+        });
+      };
       if(material === undefined){
         material = new THREE.ShaderMaterial({
           uniforms: {
