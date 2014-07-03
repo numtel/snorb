@@ -15,7 +15,8 @@
       verticalHandleGap: 30,
       maxAltitudeDisplacement: 50,
       pathHeight: 5,
-      pathWidth: 10
+      pathWidth: 10,
+      bridgeHeight: 5
     };
     this.data = _.defaults(data || {}, this.defaults);
 
@@ -218,6 +219,7 @@
 
         var mesh = that.underConstruction;
         that.buildTunnels(mesh, terra);
+        that.buildBridges(mesh, terra);
 
         var representation = terra.repres.register(that.polygon);
         representation.mesh = mesh;
@@ -407,6 +409,52 @@
       terra.object.material.attributes.translucent.needsUpdate = true;
     };
 
+    this.buildBridges = function(parentMesh, terra){
+      var boxMesh = function(vertices){
+        var geometry = new THREE.Geometry(),
+            curV;
+        for(var i = 0; i<vertices.length; i++){
+          curV = vertices[i].clone();
+          curV.z -= that.data.pathHeight + that.data.bridgeHeight;
+          geometry.vertices.push(curV);
+        };
+        for(var i = 0; i<vertices.length; i++){
+          curV = vertices[i].clone();
+          curV.z -= that.data.pathHeight;
+          geometry.vertices.push(curV);
+        };
+        geometry.faces.push(new THREE.Face3(0,1,4, undefined, new THREE.Color(0x000000)));
+        geometry.faces.push(new THREE.Face3(1,5,4, undefined, new THREE.Color(0x000000)));
+        geometry.faces.push(new THREE.Face3(3,0,7, undefined, new THREE.Color(0xff0000)));
+        geometry.faces.push(new THREE.Face3(0,4,7, undefined, new THREE.Color(0xff0000)));
+        geometry.faces.push(new THREE.Face3(1,2,5, undefined, new THREE.Color(0xff0000)));
+        geometry.faces.push(new THREE.Face3(2,6,5, undefined, new THREE.Color(0xff0000)));
+        geometry.faces.push(new THREE.Face3(3,2,6, undefined, new THREE.Color(0x000000)));
+        geometry.faces.push(new THREE.Face3(3,6,7, undefined, new THREE.Color(0x000000)));
+        geometry.faces.push(new THREE.Face3(4,5,7, undefined, new THREE.Color(0xcccccc)));
+        geometry.faces.push(new THREE.Face3(5,7,6, undefined, new THREE.Color(0xcccccc)));
+        geometry.faces.push(new THREE.Face3(0,1,3, undefined, new THREE.Color(0x555555)));
+        geometry.faces.push(new THREE.Face3(0,3,2, undefined, new THREE.Color(0x555555)));
+        geometry.computeFaceNormals();
+        var material = new THREE.MeshBasicMaterial({
+            vertexColors: THREE.FaceColors,
+            side: THREE.DoubleSide
+        });
+        var mesh = new THREE.Mesh(geometry, material);
+        return mesh;
+      };
+      var vertices = parentMesh.geometry.vertices,
+          cCoord,
+          lastWasBridge = false;
+      for(var i = 4; i<vertices.length-4; i+=4){
+        cCoord = terra.coord(vertices[i]);
+        if(vertices[i].z > cCoord.altitude){
+            parentMesh.add(boxMesh([vertices[i-4], vertices[i-1],
+                                    vertices[i+3], vertices[i]]));
+        };
+      };
+    };
+
     this.buildTunnels = function(parentMesh, terra){
       var boxMesh = function(vertices){
         var geometry = new THREE.Geometry();
@@ -429,8 +477,8 @@
         geometry.faces.push(new THREE.Face3(3,6,7, undefined, new THREE.Color(0x000000)));
         geometry.faces.push(new THREE.Face3(4,5,7, undefined, new THREE.Color(0xcccccc)));
         geometry.faces.push(new THREE.Face3(5,7,6, undefined, new THREE.Color(0xcccccc)));
-        geometry.faces.push(new THREE.Face3(0,1,3, undefined, new THREE.Color(0xcccccc)));
-        geometry.faces.push(new THREE.Face3(0,3,2, undefined, new THREE.Color(0xcccccc)));
+        geometry.faces.push(new THREE.Face3(0,1,3, undefined, new THREE.Color(0x555555)));
+        geometry.faces.push(new THREE.Face3(0,3,2, undefined, new THREE.Color(0x555555)));
         geometry.computeFaceNormals();
         var material = new THREE.MeshBasicMaterial({
             vertexColors: THREE.FaceColors,
