@@ -4,5 +4,6 @@
 var snorb = {
   core: {},
   util: {},
-  tools: {}
+  tools: {},
+  textureDir: 'textures/'
 };

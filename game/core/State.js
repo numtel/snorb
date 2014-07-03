@@ -1,6 +1,7 @@
 'use strict';
 
 snorb.core.State = function(data){
+  this.data = data;
   this.reset = function(data){
     if(this.defaults){
       this.data = _.defaults(data || {}, this.defaults);

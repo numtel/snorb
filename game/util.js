@@ -83,8 +83,10 @@ snorb.util.pointsToPolygon = function(points, maxEdgeLength){
     merged = merged.union(reader.read(polys[i]));
   };
   var polygon = [];
-  for(var i = 0; i<merged.shell.points.length; i++){
-    polygon.push({x: merged.shell.points[i].x, y: merged.shell.points[i].y});
+  if(merged.shell !==undefined){
+    for(var i = 0; i<merged.shell.points.length; i++){
+      polygon.push({x: merged.shell.points[i].x, y: merged.shell.points[i].y});
+    };
   };
   return polygon;
 };

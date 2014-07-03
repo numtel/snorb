@@ -32,7 +32,10 @@
     };
     this.deselect = function(){
       if(that.underConstruction){
+        var terra = that.underConstruction.parent.terra;
         that.underConstruction.parent.remove(that.underConstruction);
+        that.underConstruction = undefined;
+        that.updateTerraAttributes(terra);
       };
       that.startPos = that.endPos = that.handleGrabbed = undefined;
       scene.data.cursorVisible = false;
@@ -213,9 +216,7 @@
         attr.translucent.needsUpdate = true;
         terra.updateVertices();
 
-        var mesh = that.underConstruction.clone();
-        terra.object.add(mesh);
-        terra.object.remove(that.underConstruction);
+        var mesh = that.underConstruction;
 
         var representation = terra.repres.register(that.polygon);
         representation.mesh = mesh;
@@ -300,7 +301,7 @@
         bevelEnabled: false,
         extrudePath: spline
       });
-      // TODO: Generalized the following temporary fix for paths that are
+      // TODO: Generalize the following temporary fix for paths that are
       //       extruded in a rotation
       if(Math.abs(Math.round(geometry.vertices[2].z - geometry.vertices[1].z)) 
           > that.data.pathHeight){
@@ -320,7 +321,7 @@
         material = new THREE.ShaderMaterial({
           uniforms: {
             texture: {type: 't', value: THREE.ImageUtils.loadTexture(
-                      'textures/path/road.png')},
+                      snorb.textureDir + 'path/road.png')},
             highlight: {type: 'v3', value: new THREE.Vector3(0.0, 0.0, 0.0)}
           },
           vertexShader: snorb.util.shader('pathVertex'),
@@ -328,11 +329,12 @@
         });
       };
       var mesh = new THREE.Mesh(geometry, material);
-      mesh.position.z += 5;
+      //mesh.position.z += 5;
       terra.object.add(mesh);
       that.underConstruction = mesh;
       that.updateTerraAttributes(terra);
       that.polygon = that.generatePolygon();
+      that.buildTunnels(spline, mesh, terra);
       var overlap = terra.repres.checkPolygon(that.polygon);
       if(overlap.length){
         mesh.material.uniforms.highlight.value.copy(that.data.pathErrorHighlight);
@@ -357,7 +359,9 @@
             _.each(['nw','ne','sw','se'], function(ord){
               if(curCoord[ord]){
                 attrVal = terra.object.geometry.vertices[curCoord[ord]].z - curV.z;
-                terra.object.material.attributes.displacement.value[curCoord[ord]] = attrVal;
+                if(terra.object.material.attributes.displacement.value[curCoord[ord]] < attrVal){
+                  terra.object.material.attributes.displacement.value[curCoord[ord]] = attrVal;
+                };
               };
             });
             if(curV.z < curCoord.altitude - that.data.maxAltitudeDisplacement){
@@ -373,6 +377,77 @@
       };
       terra.object.material.attributes.displacement.needsUpdate = true;
       terra.object.material.attributes.translucent.needsUpdate = true;
+    };
+
+    this.buildTunnels = function(spline, parentMesh, terra){
+      var vertices = parentMesh.geometry.vertices,
+          cCoord,
+          lastWasTunnel = false;
+      for(var i = 4; i<vertices.length-4; i+=4){
+        cCoord = terra.coord(vertices[i]);
+        if(vertices[i].z > cCoord.altitude - that.data.maxAltitudeDisplacement){
+          if(lastWasTunnel === true){
+            terra.object.add(that.handleBox(vertices[i].clone(),function(){}, terra));
+          };
+          lastWasTunnel = false;
+        }else if(lastWasTunnel === false){
+          terra.object.add(that.handleBox(vertices[i+4].clone(),function(){}, terra));
+          lastWasTunnel = true;
+        };
+      };
+    };
+
+    this.buildTunnelsEx = function(spline, parentMesh, terra){
+      var vertexBackup = terra.data.scale;
+      var tunnelMesh = function(i, cCoord){
+        var scale = that.data.pathWidth,
+          angleZ = Math.atan((points[i-vertexBackup].y - points[i+vertexBackup].y) /
+                            (points[i-vertexBackup].x - points[i+vertexBackup].x)),
+          angleY = Math.atan((points[i-vertexBackup].z - points[i+vertexBackup].z) /
+                            (points[i-vertexBackup].x - points[i+vertexBackup].x)),
+          angleX = Math.atan((points[i-vertexBackup].z - points[i+vertexBackup].z) /
+                            (points[i-vertexBackup].y - points[i+vertexBackup].y)),
+          mesh = new THREE.Mesh(
+          new THREE.BoxGeometry(scale * 2,scale,scale),
+          new THREE.MeshBasicMaterial({
+            color: new THREE.Color(0x000044),
+            transparent: true,
+            opacity: 1
+          })
+        );
+/*        if(points[i-vertexBackup].altitude - points[i-vertexBackup].z < 
+            points[i].altitude - points[i].z){
+          mesh.position.copy(points[i-vertexBackup]);
+        }else{
+          mesh.position.copy(points[i+vertexBackup]);
+        };*/
+        for(var v = 0; v<mesh.geometry.vertices.length; v++){
+          mesh.geometry.vertices[v].z -= points[i].z - points[i+mesh.geometry.vertices[v].x].z;
+        };
+        mesh.position.copy(points[i]);
+        mesh.position.z += scale / 2;
+        mesh.rotation.z = angleZ;
+        //mesh.rotation.y = -angleY;
+        //mesh.rotation.x = angleX;
+        parentMesh.add(mesh);
+        return mesh;
+      };
+      var splLength = spline.getLength(),
+          points = spline.getSpacedPoints(Math.round(splLength)),
+          cCoord, lastWasTunnel = false;
+      for(var i = vertexBackup; i<points.length - vertexBackup; i++){
+        cCoord = terra.coord(points[i]);
+        points[i].altitude = cCoord.altitude;
+        if(points[i].z < cCoord.altitude - that.data.maxAltitudeDisplacement){
+          if(lastWasTunnel === false){
+            tunnelMesh(i - vertexBackup, cCoord);
+          };
+          lastWasTunnel = true;
+        }else if(lastWasTunnel === true){
+          tunnelMesh(i + vertexBackup, cCoord);
+          lastWasTunnel = false;
+        };
+      };
     };
 
   };

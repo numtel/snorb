@@ -78,7 +78,8 @@
         var overlap = terra.repres.checkPolygon(polygon),
             isOnlyWater = true;
         for(var i = 0; i<overlap.length; i++){
-          if(overlap[i].data.type !== 'water'){
+          if(overlap[i].data.type !== 'water' ||
+              (overlap[i].data.type === 'foliage' && overlap[i].data.pos.z < newLevel)){
             isOnlyWater = false;
           };
         };

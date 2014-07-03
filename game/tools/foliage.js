@@ -139,7 +139,7 @@
       var material = new THREE.ShaderMaterial({
           uniforms: {
             texture: {type: 't', value: THREE.ImageUtils.loadTexture(
-                      'textures/foliage/' + typeInfo.texture)},
+                      snorb.textureDir + 'foliage/' + typeInfo.texture)},
             highlight: {type: 'v3', value: new THREE.Vector3(0.0, 0.0, 0.0)}
           },
           vertexShader: snorb.util.shader('foliageVertex'),

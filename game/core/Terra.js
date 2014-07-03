@@ -351,13 +351,13 @@ snorb.core.Terra = function(scene, data){
   var material = new THREE.ShaderMaterial({
     uniforms: {
       texture_grass: { type: "t", value: THREE.ImageUtils.loadTexture( 
-        'textures/terra/grass.jpg' ) },
+        snorb.textureDir + 'terra/grass.jpg' ) },
       texture_bare: { type: "t", value: THREE.ImageUtils.loadTexture( 
-        'textures/terra/dirt.jpg' ) },
+        snorb.textureDir + 'terra/dirt.jpg' ) },
       texture_snow: { type: "t", value: THREE.ImageUtils.loadTexture( 
-        'textures/terra/snow.jpg' ) },
+        snorb.textureDir + 'terra/snow.jpg' ) },
       texture_rock: { type: "t", value: THREE.ImageUtils.loadTexture( 
-        'textures/terra/rock.jpg' ) },
+        snorb.textureDir + 'terra/rock.jpg' ) },
       //common
       diffuse : { type: "c", value: new THREE.Color( 0xeeeeee ) },
       opacity : { type: "f", value: 1.0 },

@@ -63,7 +63,8 @@ snorb.core.Scene = function(domElementId, data){
   this.object.add(directionalLight);
   
   // Create the water effect
-  var waterNormals = new THREE.ImageUtils.loadTexture('textures/scene/waternormals.jpg');
+  var waterNormals = new THREE.ImageUtils.loadTexture(
+    snorb.textureDir + 'scene/waternormals.jpg');
   waterNormals.wrapS = waterNormals.wrapT = THREE.RepeatWrapping; 
   this.water = new THREE.Water(this.renderer, this.camera, this.object, {
     textureWidth: 256,
@@ -80,12 +81,12 @@ snorb.core.Scene = function(domElementId, data){
   // Create skybox
   this.skybox = (function(){
     var cubeMap = THREE.ImageUtils.loadTextureCube([
-      'textures/scene/sky/px.jpg',
-      'textures/scene/sky/nx.jpg',
-      'textures/scene/sky/py.jpg',
-      'textures/scene/sky/ny.jpg',
-      'textures/scene/sky/pz.jpg',
-      'textures/scene/sky/nz.jpg'
+      snorb.textureDir + 'scene/sky/px.jpg',
+      snorb.textureDir + 'scene/sky/nx.jpg',
+      snorb.textureDir + 'scene/sky/py.jpg',
+      snorb.textureDir + 'scene/sky/ny.jpg',
+      snorb.textureDir + 'scene/sky/pz.jpg',
+      snorb.textureDir + 'scene/sky/nz.jpg'
     ]);
     cubeMap.format = THREE.RGBFormat;
 

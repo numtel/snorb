@@ -1,0 +1,64 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>Snorb Unit Test Suite - Jasmine</title>
+  <link rel="shortcut icon" type="image/png" href="lib/jasmine-2.0.0/jasmine_favicon.png">
+  <link rel="stylesheet" type="text/css" href="lib/jasmine-2.0.0/jasmine.css">
+</head>
+<body>
+  <div id="game-test" style="display:none;"></div>
+  <!-- Jasmine -->
+  <script type="text/javascript" src="lib/jasmine-2.0.0/jasmine.js"></script>
+  <script type="text/javascript" src="lib/jasmine-2.0.0/jasmine-html.js"></script>
+  <script type="text/javascript" src="lib/jasmine-2.0.0/boot.js"></script>
+
+  <!-- Game Source -->
+  <script src="../lib/jquery-2.1.1.js"></script>
+  <script src="../lib/underscore.js"></script>
+
+  <!-- 3D Visualization -->
+  <script src="../lib/three.min.js"></script>
+  <script src="../lib/three/OrbitControls.js"></script>		
+  <script src="../lib/three/RequestAnimationFrame.js"></script>
+  <script src="../lib/three/WaterMaterial.js"></script>
+
+  <!-- 2D Geometry -->
+  <script src="../lib/grahamscan.js"></script>
+  <script src="../lib/polygon.js"></script>
+  <script src="../lib/delaunay.js"></script>
+  <script src="../lib/javascript.util.js"></script>
+  <script src="../lib/jsts.js"></script>
+
+  <!-- Initializer -->
+  <script src="../game/snorb.js"></script>
+  <!-- Modules -->
+  <script src="../game/util.js"></script>
+  <!-- Classes -->
+  <script src="../game/core/State.js"></script>
+  <script src="../game/core/Scene.js"></script>
+  <script src="../game/core/Terra.js"></script>
+  <script src="../game/core/Tool.js"></script>
+  <script src="../game/core/Represent.js"></script>
+  <script src="../game/core/Representation.js"></script>
+
+  <!-- Tools -->
+  <script src="../game/tools/viewRotate.js"></script>
+  <script src="../game/tools/terrain.js"></script>
+  <script src="../game/tools/water.js"></script>
+  <script src="../game/tools/foliage.js"></script>
+  <script src="../game/tools/path.js"></script>
+  <script src="../game/tools/demolish.js"></script>
+
+  <!-- Front End -->
+  <!-- <script src="../game/lute.js"></script> -->
+
+  <script>
+    snorb.textureDir = '../textures/';
+  </script>
+
+  <!-- Unit Tests -->
+  <script type="text/javascript" src="core/State.js"></script>
+  <script type="text/javascript" src="core/Scene.js"></script>
+</body>
+</html>
