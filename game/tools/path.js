@@ -217,6 +217,7 @@
         terra.updateVertices();
 
         var mesh = that.underConstruction;
+        that.buildTunnels(mesh, terra);
 
         var representation = terra.repres.register(that.polygon);
         representation.mesh = mesh;
@@ -334,7 +335,6 @@
       that.underConstruction = mesh;
       that.updateTerraAttributes(terra);
       that.polygon = that.generatePolygon();
-      that.buildTunnels(spline, mesh, terra);
       var overlap = terra.repres.checkPolygon(that.polygon);
       if(overlap.length){
         mesh.material.uniforms.highlight.value.copy(that.data.pathErrorHighlight);
@@ -379,72 +379,53 @@
       terra.object.material.attributes.translucent.needsUpdate = true;
     };
 
-    this.buildTunnels = function(spline, parentMesh, terra){
+    this.buildTunnels = function(parentMesh, terra){
+      var boxMesh = function(vertices){
+        var geometry = new THREE.Geometry();
+        for(var i = 0; i<vertices.length; i++){
+          geometry.vertices.push(vertices[i].clone());
+        };
+        var curV;
+        for(var i = 0; i<vertices.length; i++){
+          curV = vertices[i].clone();
+          curV.z += 30;
+          geometry.vertices.push(curV);
+        };
+        geometry.faces.push(new THREE.Face3(0,1,4, undefined, new THREE.Color(0x000000)));
+        geometry.faces.push(new THREE.Face3(1,5,4, undefined, new THREE.Color(0x000000)));
+        geometry.faces.push(new THREE.Face3(3,0,7, undefined, new THREE.Color(0xff0000)));
+        geometry.faces.push(new THREE.Face3(0,4,7, undefined, new THREE.Color(0xff0000)));
+        geometry.faces.push(new THREE.Face3(1,2,5, undefined, new THREE.Color(0xff0000)));
+        geometry.faces.push(new THREE.Face3(2,6,5, undefined, new THREE.Color(0xff0000)));
+        geometry.faces.push(new THREE.Face3(3,2,6, undefined, new THREE.Color(0x000000)));
+        geometry.faces.push(new THREE.Face3(3,6,7, undefined, new THREE.Color(0x000000)));
+        geometry.faces.push(new THREE.Face3(4,5,7, undefined, new THREE.Color(0xcccccc)));
+        geometry.faces.push(new THREE.Face3(5,7,6, undefined, new THREE.Color(0xcccccc)));
+        geometry.faces.push(new THREE.Face3(0,1,3, undefined, new THREE.Color(0xcccccc)));
+        geometry.faces.push(new THREE.Face3(0,3,2, undefined, new THREE.Color(0xcccccc)));
+        geometry.computeFaceNormals();
+        var material = new THREE.MeshBasicMaterial({
+            vertexColors: THREE.FaceColors,
+            side: THREE.DoubleSide
+        });
+        var mesh = new THREE.Mesh(geometry, material);
+        return mesh;
+      };
       var vertices = parentMesh.geometry.vertices,
           cCoord,
           lastWasTunnel = false;
       for(var i = 4; i<vertices.length-4; i+=4){
         cCoord = terra.coord(vertices[i]);
-        if(vertices[i].z > cCoord.altitude - that.data.maxAltitudeDisplacement){
-          if(lastWasTunnel === true){
-            terra.object.add(that.handleBox(vertices[i].clone(),function(){}, terra));
-          };
-          lastWasTunnel = false;
-        }else if(lastWasTunnel === false){
-          terra.object.add(that.handleBox(vertices[i+4].clone(),function(){}, terra));
-          lastWasTunnel = true;
-        };
-      };
-    };
-
-    this.buildTunnelsEx = function(spline, parentMesh, terra){
-      var vertexBackup = terra.data.scale;
-      var tunnelMesh = function(i, cCoord){
-        var scale = that.data.pathWidth,
-          angleZ = Math.atan((points[i-vertexBackup].y - points[i+vertexBackup].y) /
-                            (points[i-vertexBackup].x - points[i+vertexBackup].x)),
-          angleY = Math.atan((points[i-vertexBackup].z - points[i+vertexBackup].z) /
-                            (points[i-vertexBackup].x - points[i+vertexBackup].x)),
-          angleX = Math.atan((points[i-vertexBackup].z - points[i+vertexBackup].z) /
-                            (points[i-vertexBackup].y - points[i+vertexBackup].y)),
-          mesh = new THREE.Mesh(
-          new THREE.BoxGeometry(scale * 2,scale,scale),
-          new THREE.MeshBasicMaterial({
-            color: new THREE.Color(0x000044),
-            transparent: true,
-            opacity: 1
-          })
-        );
-/*        if(points[i-vertexBackup].altitude - points[i-vertexBackup].z < 
-            points[i].altitude - points[i].z){
-          mesh.position.copy(points[i-vertexBackup]);
-        }else{
-          mesh.position.copy(points[i+vertexBackup]);
-        };*/
-        for(var v = 0; v<mesh.geometry.vertices.length; v++){
-          mesh.geometry.vertices[v].z -= points[i].z - points[i+mesh.geometry.vertices[v].x].z;
-        };
-        mesh.position.copy(points[i]);
-        mesh.position.z += scale / 2;
-        mesh.rotation.z = angleZ;
-        //mesh.rotation.y = -angleY;
-        //mesh.rotation.x = angleX;
-        parentMesh.add(mesh);
-        return mesh;
-      };
-      var splLength = spline.getLength(),
-          points = spline.getSpacedPoints(Math.round(splLength)),
-          cCoord, lastWasTunnel = false;
-      for(var i = vertexBackup; i<points.length - vertexBackup; i++){
-        cCoord = terra.coord(points[i]);
-        points[i].altitude = cCoord.altitude;
-        if(points[i].z < cCoord.altitude - that.data.maxAltitudeDisplacement){
+        vertices[i].alt = cCoord.altitude;
+        if(vertices[i].z < cCoord.altitude){
           if(lastWasTunnel === false){
-            tunnelMesh(i - vertexBackup, cCoord);
+            parentMesh.add(boxMesh([vertices[i-4], vertices[i-1],
+                                    vertices[i+3], vertices[i]]));
           };
           lastWasTunnel = true;
         }else if(lastWasTunnel === true){
-          tunnelMesh(i + vertexBackup, cCoord);
+          parentMesh.add(boxMesh([vertices[i-4], vertices[i-1],
+                                  vertices[i+3], vertices[i]]));
           lastWasTunnel = false;
         };
       };
