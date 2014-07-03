@@ -78,8 +78,8 @@
         var overlap = terra.repres.checkPolygon(polygon),
             isOnlyWater = true;
         for(var i = 0; i<overlap.length; i++){
-          if(overlap[i].data.type !== 'water' ||
-              (overlap[i].data.type === 'foliage' && overlap[i].data.pos.z < newLevel)){
+          if((overlap[i].data.type === 'foliage' && overlap[i].data.pos.z < newLevel) ||
+               ['water', 'foliage'].indexOf(overlap[i].data.type) === -1){
             isOnlyWater = false;
           };
         };
@@ -194,7 +194,7 @@
         representation.data.depthAtPos = newLevel - coord.altitude;
         representation.data.pos = new THREE.Vector2(pos.x, pos.y);
         representation.destroy = function(){
-          terra.scene.object.remove(this.mesh);
+          terra.object.remove(this.mesh);
         };
         terra.updateRenderDepth();
         return true;
