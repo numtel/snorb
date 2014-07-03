@@ -52,7 +52,7 @@ snorb.core.Scene = function(domElementId, data){
   
   // Add light
   var directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-  directionalLight.position.set(-20, 500, 20);
+  directionalLight.position.set(0, 1, 0);
   directionalLight.castShadow = true;
   directionalLight.shadowCameraNear = 100;
   directionalLight.shadowCameraFar = 2500;

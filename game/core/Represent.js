@@ -26,6 +26,9 @@ snorb.core.Represent = function(terra, data){
   };
 
   this.checkPolygon = filterObjects(function(polygon, obj){
+    if(!polygon || polygon.length === 0){
+      return [];
+    };
     return window.polygon.intersection(polygon, obj.polygon).length > 0;
   });
 

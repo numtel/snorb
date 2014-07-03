@@ -7,11 +7,11 @@
 
     this.defaults = {
       pathErrorHighlight: new THREE.Vector3(1,0,0),
-      horizHandleColor: 0xff0000,
-      horizHandleGrabbedColor: 0x00ff00,
+      horizHandleColor: 0x00ff00,
+      horizHandleGrabbedColor: 0xff0000,
       horizHandleGap: 10,
-      verticalHandleColor: 0xff00ff,
-      verticalHandleGrabbedColor: 0xffff00,
+      verticalHandleColor: 0xffff00,
+      verticalHandleGrabbedColor: 0xff0000,
       verticalHandleGap: 30,
       maxAltitudeDisplacement: 50,
       pathHeight: 5,
@@ -117,6 +117,7 @@
           that.updateTerraAttributes(terra);
           return;
         };
+        // Push middle xy mover
         that.handles = [
             that.handleBox(new THREE.Vector3(that.midPos.x, 
                                              that.midPos.y, 
@@ -143,38 +144,35 @@
                 that.handles[1].position.copy(this.position);
                 that.handles[1].position.z += that.data.verticalHandleGap -
                                               that.data.horizHandleGap;
-              }, terra),
-            that.handleBox(new THREE.Vector3(that.midPos.x, 
-                                             that.midPos.y, 
-                                             that.midPos.z + that.data.verticalHandleGap), 
-              function(event){
-                var newPos = scene.mouse3D(
-                  event.clientX, event.clientY, 'x', this.position.x);
-                this.position.z = newPos.y;
-                that.midPos.z = newPos.y - that.data.verticalHandleGap;
-                that.handles[0].position.copy(this.position);
-                that.handles[0].position.z -= that.data.verticalHandleGap - 
-                                              that.data.horizHandleGap;
-              }, terra, true),
-            that.handleBox(new THREE.Vector3(that.startPos.x, 
-                                             that.startPos.y, 
-                                             that.startPos.z + that.data.verticalHandleGap), 
-              function(event){
-                var newPos = scene.mouse3D(
-                  event.clientX, event.clientY, 'x', this.position.x);
-                this.position.z = newPos.y;
-                that.startPos.z = newPos.y - that.data.verticalHandleGap;
-              }, terra, true),
-            that.handleBox(new THREE.Vector3(that.endPos.x, 
-                                             that.endPos.y, 
-                                             that.endPos.z + that.data.verticalHandleGap), 
-              function(event){
-                var newPos = scene.mouse3D(
-                  event.clientX, event.clientY, 'x', this.position.x);
-                this.position.z = newPos.y;
-                that.endPos.z = newPos.y - that.data.verticalHandleGap;
-              }, terra, true)
+              }, terra)
           ];
+        // Push each z mover
+        _.each(['midPos', 'startPos', 'endPos'], function(posKey){
+          var thisKey = posKey;
+          that.handles.push(that.handleBox(new THREE.Vector3(
+            that[thisKey].x, 
+            that[thisKey].y, 
+            that[thisKey].z + that.data.verticalHandleGap), 
+            function(event){
+              var newPos = scene.mouse3D(
+                event.clientX, event.clientY, 'x', this.position.x),
+                newAlt = newPos.y - that.data.verticalHandleGap;
+              if(newAlt < terra.data.minAlt){
+                newPos.y = terra.data.minAlt + that.data.verticalHandleGap;
+                newAlt = terra.data.minAlt;
+              };
+              if(newAlt > terra.data.maxAlt){
+                newPos.y = terra.data.maxAlt + that.data.verticalHandleGap;
+                newAlt = terra.data.maxAlt;
+              };
+              this.position.z = newPos.y;
+              that[thisKey].z = newAlt;
+              if(thisKey === 'midPos'){
+                that.handles[0].position.z = newAlt + that.data.horizHandleGap;
+              };
+            }, terra, true)
+          );
+        });
         for(var i = 0; i<that.handles.length; i++){
           terra.object.add(that.handles[i]);
           that.handles[i].index = i;
@@ -189,8 +187,10 @@
       if(that.underConstruction){
         var terra = that.underConstruction.parent.terra;
         var pointArray = [], curV;
-        for(var i = 0; i<that.underConstruction.geometry.vertices.length; i++){
+        for(var i = 0; i<that.underConstruction.geometry.vertices.length; i+=4){
           curV = that.underConstruction.geometry.vertices[i];
+          pointArray.push(new THREE.Vector2(curV.x, curV.y));
+          curV = that.underConstruction.geometry.vertices[i+3];
           pointArray.push(new THREE.Vector2(curV.x, curV.y));
         };
         return snorb.util.pointsToPolygon(pointArray, terra.data.scale * 2);
@@ -243,12 +243,40 @@
     this.handleBox = function(pos, mouseHandler, terra, isVertical){
       var color = isVertical ? that.data.horizHandleColor : that.data.verticalHandleColor;
       var scale = terra.data.scale;
-      var mesh = new THREE.Mesh(
-        new THREE.BoxGeometry(scale, scale, scale),
-        new THREE.MeshBasicMaterial({
+      var geometry;
+      if(isVertical){
+        geometry = new THREE.CylinderGeometry(0, scale * 0.5, scale * 1, 8, 1, false);
+        for(var i = 0; i <geometry.vertices.length; i++){
+          geometry.vertices[i].copy(new THREE.Vector3(
+            geometry.vertices[i].x,
+            geometry.vertices[i].z,
+            geometry.vertices[i].y
+          ));
+        };
+        geometry.computeFaceNormals();
+      }else{
+        geometry = new THREE.CylinderGeometry(0, scale * 0.5, scale * 1, 8, 1, false);
+        for(var i = 0; i<geometry.vertices.length; i++){
+          geometry.vertices[i].y+=scale;
+        };
+        var cloneGeo = geometry.clone();
+        for(var i = 0; i<cloneGeo.vertices.length; i++){
+          cloneGeo.vertices[i].y*=-1;
+        };
+        THREE.GeometryUtils.merge(geometry, cloneGeo);
+        cloneGeo = geometry.clone();
+        for(var i = 0; i<cloneGeo.vertices.length; i++){
+          cloneGeo.vertices[i].x = geometry.vertices[i].y;
+          cloneGeo.vertices[i].y = geometry.vertices[i].x;
+        };
+        THREE.GeometryUtils.merge(geometry, cloneGeo);
+        geometry.computeFaceNormals();
+        
+      };
+      var mesh = new THREE.Mesh(geometry,
+        new THREE.MeshLambertMaterial({
           color: new THREE.Color(color),
-          transparent: true,
-          opacity: 1
+          side: THREE.DoubleSide
         })
       );
       mesh.isVertical = isVertical;
@@ -416,7 +444,6 @@
           lastWasTunnel = false;
       for(var i = 4; i<vertices.length-4; i+=4){
         cCoord = terra.coord(vertices[i]);
-        vertices[i].alt = cCoord.altitude;
         if(vertices[i].z < cCoord.altitude){
           if(lastWasTunnel === false){
             parentMesh.add(boxMesh([vertices[i-4], vertices[i-1],
