@@ -16,7 +16,10 @@
       maxAltitudeDisplacement: 50,
       pathHeight: 5,
       pathWidth: 10,
-      bridgeHeight: 5
+      bridgeHeight: 5,
+      pylonDistance: 50,
+      bridgeSideColor: 0xff0000,
+      bridgePylonColor: 0x990000
     };
     this.data = _.defaults(data || {}, this.defaults);
 
@@ -410,12 +413,17 @@
     };
 
     this.buildBridges = function(parentMesh, terra){
-      var boxMesh = function(vertices){
+      var boxMesh = function(vertices, isPylon){
         var geometry = new THREE.Geometry(),
-            curV;
+            curV, cCoord;
         for(var i = 0; i<vertices.length; i++){
           curV = vertices[i].clone();
-          curV.z -= that.data.pathHeight + that.data.bridgeHeight;
+          if(isPylon){
+            cCoord = terra.coord(curV);
+            curV.z = cCoord.altitude;
+          }else{
+            curV.z -= that.data.pathHeight + that.data.bridgeHeight;
+          };
           geometry.vertices.push(curV);
         };
         for(var i = 0; i<vertices.length; i++){
@@ -423,18 +431,20 @@
           curV.z -= that.data.pathHeight;
           geometry.vertices.push(curV);
         };
+        var sideColor = new THREE.Color(isPylon ?
+              that.data.bridgePylonColor : that.data.bridgeSideColor);
         geometry.faces.push(new THREE.Face3(0,1,4, undefined, new THREE.Color(0x000000)));
         geometry.faces.push(new THREE.Face3(1,5,4, undefined, new THREE.Color(0x000000)));
-        geometry.faces.push(new THREE.Face3(3,0,7, undefined, new THREE.Color(0xff0000)));
-        geometry.faces.push(new THREE.Face3(0,4,7, undefined, new THREE.Color(0xff0000)));
-        geometry.faces.push(new THREE.Face3(1,2,5, undefined, new THREE.Color(0xff0000)));
-        geometry.faces.push(new THREE.Face3(2,6,5, undefined, new THREE.Color(0xff0000)));
+        geometry.faces.push(new THREE.Face3(3,0,7, undefined, sideColor));
+        geometry.faces.push(new THREE.Face3(0,4,7, undefined, sideColor));
+        geometry.faces.push(new THREE.Face3(1,2,5, undefined, sideColor));
+        geometry.faces.push(new THREE.Face3(2,6,5, undefined, sideColor));
         geometry.faces.push(new THREE.Face3(3,2,6, undefined, new THREE.Color(0x000000)));
         geometry.faces.push(new THREE.Face3(3,6,7, undefined, new THREE.Color(0x000000)));
         geometry.faces.push(new THREE.Face3(4,5,7, undefined, new THREE.Color(0xcccccc)));
         geometry.faces.push(new THREE.Face3(5,7,6, undefined, new THREE.Color(0xcccccc)));
         geometry.faces.push(new THREE.Face3(0,1,3, undefined, new THREE.Color(0x555555)));
-        geometry.faces.push(new THREE.Face3(0,3,2, undefined, new THREE.Color(0x555555)));
+        geometry.faces.push(new THREE.Face3(1,3,2, undefined, new THREE.Color(0x555555)));
         geometry.computeFaceNormals();
         var material = new THREE.MeshBasicMaterial({
             vertexColors: THREE.FaceColors,
@@ -445,12 +455,13 @@
       };
       var vertices = parentMesh.geometry.vertices,
           cCoord,
-          lastWasBridge = false;
+          pylonDiv = that.data.pylonDistance / terra.data.scale * 4;
       for(var i = 4; i<vertices.length-4; i+=4){
         cCoord = terra.coord(vertices[i]);
         if(vertices[i].z > cCoord.altitude){
             parentMesh.add(boxMesh([vertices[i-4], vertices[i-1],
-                                    vertices[i+3], vertices[i]]));
+                                    vertices[i+3], vertices[i]],
+                                    i % pylonDiv < 2));
         };
       };
     };
