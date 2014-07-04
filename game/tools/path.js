@@ -24,9 +24,16 @@
     this.data = _.defaults(data || {}, this.defaults);
 
     this.fieldDefinitions = {
+      pathWidth: {label: 'Width', type: 'int', min: that.data.pathHeight + 1, max: 100},
       construct: {label: 'Construct', type: 'button', click: function(){
         this.finalize();
       }}
+    };
+
+    this.optionChange = function(optionName){
+      if(optionName === 'pathWidth' && that.underConstruction){
+        that.buildPreview(that.underConstruction.parent.terra);
+      };
     };
 
     this.select = function(){
@@ -190,12 +197,16 @@
     this.generatePolygon = function(){
       if(that.underConstruction){
         var terra = that.underConstruction.parent.terra;
-        var pointArray = [], curV;
-        for(var i = 0; i<that.underConstruction.geometry.vertices.length; i+=4){
+        var vPer = that.underConstruction.shapePointsLength;
+        var pointArray = [], curV, 
+            serialized = [], cSer;
+        for(var i = 0; i<that.underConstruction.geometry.vertices.length; i++){
           curV = that.underConstruction.geometry.vertices[i];
-          pointArray.push(new THREE.Vector2(curV.x, curV.y));
-          curV = that.underConstruction.geometry.vertices[i+3];
-          pointArray.push(new THREE.Vector2(curV.x, curV.y));
+          cSer = curV.x + ',' + curV.y;
+          if(serialized.indexOf(cSer) === -1){
+            pointArray.push(new THREE.Vector2(curV.x, curV.y));
+            serialized.push(cSer);
+          };
         };
         return snorb.util.pointsToPolygon(pointArray, terra.data.scale * 2);
       };
@@ -204,6 +215,9 @@
     this.finalize = function(){
       if(that.underConstruction){
         var terra = that.underConstruction.parent.terra;
+        if(that.polygon.length === 0){
+          return;
+        };
         for(var i = 0; i<that.handles.length; i++){
           terra.object.remove(that.handles[i]);
         };
@@ -324,12 +338,33 @@
         return;
       };
       var spline = new THREE.SplineCurve3([startPos, midPos, endPos]);
-      var shape = new THREE.Shape([
-        new THREE.Vector2(-that.data.pathWidth / 2, 0),
-        new THREE.Vector2(-that.data.pathWidth / 2, that.data.pathHeight),
-        new THREE.Vector2(that.data.pathWidth / 2, that.data.pathHeight),
-        new THREE.Vector2(that.data.pathWidth / 2, 0)
-      ]);
+      var pathShapePoints = function(flipCoord){
+        var points = [];
+        if(flipCoord){
+          points.push(new THREE.Vector2(0, -that.data.pathWidth / 2));
+        }else{
+          points.push(new THREE.Vector2(-that.data.pathWidth / 2, 0));
+        };
+        var xVal = (-that.data.pathWidth/2) - terra.data.scale;
+        while(xVal !== that.data.pathWidth /2){
+          xVal += terra.data.scale;
+          if(xVal > that.data.pathWidth /2){
+            xVal = that.data.pathWidth /2;
+          };
+          if(flipCoord){
+            points.push(new THREE.Vector2(that.data.pathHeight, xVal));
+          }else{
+            points.push(new THREE.Vector2(xVal, that.data.pathHeight));
+          };
+        };
+        if(flipCoord){
+          points.push(new THREE.Vector2(0, that.data.pathWidth / 2));
+        }else{
+          points.push(new THREE.Vector2(that.data.pathWidth / 2, 0));
+        };
+        return points;
+      };
+      var shape = new THREE.Shape(pathShapePoints());
       var geometry = new THREE.ExtrudeGeometry(shape, {
         steps: Math.round(length/terra.data.scale),
         bevelEnabled: false,
@@ -339,12 +374,7 @@
       //       extruded in a rotation
       if(Math.abs(Math.round(geometry.vertices[2].z - geometry.vertices[1].z)) 
           > that.data.pathHeight){
-        shape = new THREE.Shape([
-          new THREE.Vector2(0, -that.data.pathWidth / 2, 0),
-          new THREE.Vector2(that.data.pathHeight, -that.data.pathWidth / 2),
-          new THREE.Vector2(that.data.pathHeight, that.data.pathWidth / 2),
-          new THREE.Vector2(0, that.data.pathWidth / 2)
-        ]);
+        shape = new THREE.Shape(pathShapePoints(true));
         geometry = new THREE.ExtrudeGeometry(shape, {
           steps: Math.round(length/terra.data.scale),
           bevelEnabled: false,
@@ -365,11 +395,19 @@
       var mesh = new THREE.Mesh(geometry, material);
       //mesh.position.z += 5;
       terra.object.add(mesh);
+      mesh.shapePointsLength = shape.actions.length;
       that.underConstruction = mesh;
       that.updateTerraAttributes(terra);
       that.polygon = that.generatePolygon();
       var overlap = terra.repres.checkPolygon(that.polygon);
       if(overlap.length){
+        for(var i = 0; i<overlap.length; i++){
+          if(overlap[i].data.type = 'path'){
+            console.log('intersect');
+            // find vertices nearby
+            // construct an intersection
+          };
+        };
         mesh.material.uniforms.highlight.value.copy(that.data.pathErrorHighlight);
       }else{
         mesh.material.uniforms.highlight.value.copy(new THREE.Vector3(0,0,0));
@@ -455,12 +493,13 @@
       };
       var vertices = parentMesh.geometry.vertices,
           cCoord,
-          pylonDiv = that.data.pylonDistance / terra.data.scale * 4;
-      for(var i = 4; i<vertices.length-4; i+=4){
+          vPer = parentMesh.shapePointsLength,
+          pylonDiv = that.data.pylonDistance / terra.data.scale * vPer;
+      for(var i = vPer; i<vertices.length-vPer; i+=vPer){
         cCoord = terra.coord(vertices[i]);
         if(vertices[i].z > cCoord.altitude){
-            parentMesh.add(boxMesh([vertices[i-4], vertices[i-1],
-                                    vertices[i+3], vertices[i]],
+            parentMesh.add(boxMesh([vertices[i-vPer], vertices[i-1],
+                                    vertices[i+vPer - 1], vertices[i]],
                                     i % pylonDiv < 2));
         };
       };
@@ -500,18 +539,19 @@
       };
       var vertices = parentMesh.geometry.vertices,
           cCoord,
+          vPer = parentMesh.shapePointsLength,
           lastWasTunnel = false;
-      for(var i = 4; i<vertices.length-4; i+=4){
+      for(var i = vPer; i<vertices.length-vPer; i+=vPer){
         cCoord = terra.coord(vertices[i]);
         if(vertices[i].z < cCoord.altitude){
           if(lastWasTunnel === false){
-            parentMesh.add(boxMesh([vertices[i-4], vertices[i-1],
-                                    vertices[i+3], vertices[i]]));
+            parentMesh.add(boxMesh([vertices[i-vPer], vertices[i-1],
+                                    vertices[i+vPer - 1], vertices[i]]));
           };
           lastWasTunnel = true;
         }else if(lastWasTunnel === true){
-          parentMesh.add(boxMesh([vertices[i-4], vertices[i-1],
-                                  vertices[i+3], vertices[i]]));
+          parentMesh.add(boxMesh([vertices[i-vPer], vertices[i-1],
+                                  vertices[i+vPer - 1], vertices[i]]));
           lastWasTunnel = false;
         };
       };
