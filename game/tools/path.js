@@ -93,7 +93,7 @@
     this.mousedown = function(pos, terra, event){
       if(that.underConstruction){
         var handleIntersect = scene.mouseIntersect(
-          event.clientX, event.clientY, that.underConstruction.children);
+          event.clientX, event.clientY, that.handles);
         if(handleIntersect.length){
           that.handleGrabbed = handleIntersect[0].object;
           that.handleGrabbed.material.color.copy(
@@ -113,11 +113,16 @@
     };
 
     this.rebuild = function(terra, data){
+      var origWidth = that.data.pathWidth;
+      if(data.width){
+        that.data.pathWidth = data.width;
+      };
       _.each(['startPos','midPos','endPos'], function(whichPos){
         that[whichPos] = data[whichPos];
       });
       that.buildPreview(terra);
       that.finalize();
+      that.data.pathWidth = origWidth;
     };
 
     this.mouseup = function(pos, terra, event){
@@ -128,11 +133,13 @@
           that.updateTerraAttributes(terra);
           return;
         };
-        // Push middle xy mover
-        that.handles = [
-            that.handleBox(new THREE.Vector3(that.midPos.x, 
-                                             that.midPos.y, 
-                                             that.midPos.z + that.data.horizHandleGap), 
+
+        that.handles = [];
+        _.each(['midPos', 'startPos', 'endPos'], function(posKey){
+          var thisKey = posKey;
+          var handleXY = that.handleBox(new THREE.Vector3(that[thisKey].x, 
+                                             that[thisKey].y, 
+                                             that[thisKey].z + that.data.horizHandleGap), 
               function(event){
                 var newPos = scene.mouse3D(
                   event.clientX, event.clientY, 'y', this.position.z);
@@ -150,17 +157,13 @@
                 };
                 this.position.x = newPos.x;
                 this.position.y = -newPos.z;
-                that.midPos.copy(this.position);
-                that.midPos.z -= that.data.horizHandleGap;
-                that.handles[1].position.copy(this.position);
-                that.handles[1].position.z += that.data.verticalHandleGap -
+                that[thisKey].copy(this.position);
+                that[thisKey].z -= that.data.horizHandleGap;
+                handleZ.position.copy(this.position);
+                handleZ.position.z += that.data.verticalHandleGap -
                                               that.data.horizHandleGap;
-              }, terra)
-          ];
-        // Push each z mover
-        _.each(['midPos', 'startPos', 'endPos'], function(posKey){
-          var thisKey = posKey;
-          that.handles.push(that.handleBox(new THREE.Vector3(
+              }, terra);
+          var handleZ = that.handleBox(new THREE.Vector3(
             that[thisKey].x, 
             that[thisKey].y, 
             that[thisKey].z + that.data.verticalHandleGap), 
@@ -178,11 +181,10 @@
               };
               this.position.z = newPos.y;
               that[thisKey].z = newAlt;
-              if(thisKey === 'midPos'){
-                that.handles[0].position.z = newAlt + that.data.horizHandleGap;
-              };
-            }, terra, true)
-          );
+              handleXY.position.z = newAlt + that.data.horizHandleGap;
+            }, terra, true);
+          that.handles.push(handleXY);
+          that.handles.push(handleZ);
         });
         for(var i = 0; i<that.handles.length; i++){
           terra.object.add(that.handles[i]);
@@ -245,6 +247,7 @@
         representation.data.startPos = that.startPos;
         representation.data.midPos = that.midPos;
         representation.data.endPos = that.endPos;
+        representation.data.width = that.data.pathWidth;
         representation.destroy = function(){
           terra.object.remove(this.mesh);
         };
@@ -403,7 +406,7 @@
       if(overlap.length){
         for(var i = 0; i<overlap.length; i++){
           if(overlap[i].data.type = 'path'){
-            console.log('intersect');
+            that.buildIntersection(mesh, that.polygon, overlap[i], terra);
             // find vertices nearby
             // construct an intersection
           };
@@ -412,6 +415,62 @@
       }else{
         mesh.material.uniforms.highlight.value.copy(new THREE.Vector3(0,0,0));
       };
+    };
+
+    this.buildIntersection = function(mesh, meshPolygon, overlapper, terra){
+      var overlappingVertices = function(mesh, meshPolygon, overlapper){
+        var inMesh = [], inOverlapper = [];
+        for(var i = 0; i<mesh.geometry.vertices.length; i++){
+          if(window.polygon.pointInside(
+              mesh.geometry.vertices[i].clone(),
+              overlapper.polygon, true)){
+            inMesh.push(i);
+          };
+        };
+        for(var i = 0; i<overlapper.mesh.geometry.vertices.length; i++){
+          if(window.polygon.pointInside(
+              overlapper.mesh.geometry.vertices[i].clone(),
+              meshPolygon, true)){
+            inOverlapper.push(i);
+          };
+        };
+        return {mesh: inMesh, overlap: inOverlapper};
+      };
+      var vertexRows = function(mesh, vertices){
+        var rowV = [], curR;
+        for(var i = 0; i<vertices.length; i++){
+          curR = vertices[i] - (vertices[i] % mesh.shapePointsLength);
+          if(rowV.indexOf(curR) === -1){
+            rowV.push(curR);
+          };
+        };
+        if(rowV.length===1 && rowV[0] !== 0 &&
+            rowV[0] < mesh.geometry.vertices.length - mesh.shapePointsLength){
+          rowV.push(rowV[0] + mesh.shapePointsLength);
+        };
+        return rowV;
+      };
+      var overlapV = overlappingVertices(mesh, meshPolygon, overlapper),
+          meshVR = vertexRows(mesh, overlapV.mesh),
+          overlapVR = vertexRows(overlapper.mesh, overlapV.overlap);
+      if(meshVR.length === 1 && overlapVR.length === 1){
+        // only one index in meshVr or overlapVR means that it's the end of the path
+        // do conjoining, not intersecting!
+        var newPos = overlapper.mesh.geometry.vertices[overlapVR[0]].clone();
+        if(meshVR[0] === 0){
+          that.startPos = newPos;
+        }else{
+          that.endPos = newPos;
+        };
+      }else if(meshVR.length === 1 || overlapVR.length === 1){
+        // one path ends into the middle of another
+      }else{
+        // both paths intersecting in middle
+      };
+      that.previewIsDirty = true;
+      console.log(overlapV);
+      console.log(meshVR);
+      console.log(overlapVR);
     };
 
     this.updateTerraAttributes = function(terra){
@@ -433,16 +492,11 @@
                 if(terra.object.material.attributes.displacement.value[curCoord[ord]] < attrVal){
                   terra.object.material.attributes.displacement.value[curCoord[ord]] = attrVal;
                 };
-              };
-            });
-            if(curV.z < curCoord.altitude - that.data.maxAltitudeDisplacement){
-              // Go underground!
-              _.each(['nw','ne','sw','se'], function(ord){
-                if(curCoord[ord]){
+                if(curV.z < curCoord.altitude - that.data.maxAltitudeDisplacement){
                   terra.object.material.attributes.translucent.value[curCoord[ord]] = 0.3;
                 };
-              });
-            };
+              };
+            });
           };
         };
       };

@@ -80,7 +80,11 @@ snorb.util.pointsToPolygon = function(points, maxEdgeLength){
   var reader = new jsts.io.WKTReader(),
       merged = reader.read(polys[0]).union(reader.read(polys[1]));
   for(var i = 2; i<polys.length; i++){
-    merged = merged.union(reader.read(polys[i]));
+    try{
+      merged = merged.union(reader.read(polys[i]));
+    }catch(err){
+      console.log('Error triangulating points!');
+    };
   };
   var polygon = [];
   if(merged.shell !==undefined){
