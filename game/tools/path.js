@@ -19,7 +19,10 @@
       bridgeHeight: 5,
       pylonDistance: 50,
       bridgeSideColor: 0xff0000,
-      bridgePylonColor: 0x990000
+      bridgePylonColor: 0x990000,
+      intersectionHeight: 2,
+      intersectionRampLength: 3,
+      intersectionMaxRampHeight: 15
     };
     this.data = _.defaults(data || {}, this.defaults);
 
@@ -267,6 +270,7 @@
       var scale = terra.data.scale;
       var geometry;
       if(isVertical){
+        // vertical cone geometry
         geometry = new THREE.CylinderGeometry(0, scale * 0.5, scale * 1, 8, 1, false);
         for(var i = 0; i <geometry.vertices.length; i++){
           geometry.vertices[i].copy(new THREE.Vector3(
@@ -277,6 +281,7 @@
         };
         geometry.computeFaceNormals();
       }else{
+        // 4-way horizontal cones
         geometry = new THREE.CylinderGeometry(0, scale * 0.5, scale * 1, 8, 1, false);
         for(var i = 0; i<geometry.vertices.length; i++){
           geometry.vertices[i].y+=scale;
@@ -450,27 +455,130 @@
         };
         return rowV;
       };
+      var findAltRange = function(mesh, vertexRows){
+        var min, max, curV;
+        for(var r = 0; r<vertexRows.length; r++){
+          for(var i = 0; i<mesh.shapePointsLength; i++){
+            curV = mesh.geometry.vertices[vertexRows[r]+i];
+            if(max === undefined || curV.z > max){
+              max = curV.z;
+            };
+            if(min === undefined || curV.z < min){
+              min = curV.z;
+            };
+          };
+        };
+        return {min: min, max: max};
+      };
       var overlapV = overlappingVertices(mesh, meshPolygon, overlapper),
           meshVR = vertexRows(mesh, overlapV.mesh),
           overlapVR = vertexRows(overlapper.mesh, overlapV.overlap);
-      if(meshVR.length === 1 && overlapVR.length === 1){
-        // only one index in meshVr or overlapVR means that it's the end of the path
-        // do conjoining, not intersecting!
-        var newPos = overlapper.mesh.geometry.vertices[overlapVR[0]].clone();
-        if(meshVR[0] === 0){
-          that.startPos = newPos;
-        }else{
-          that.endPos = newPos;
-        };
-      }else if(meshVR.length === 1 || overlapVR.length === 1){
-        // one path ends into the middle of another
-      }else{
-        // both paths intersecting in middle
+
+      if(meshVR.length === 0 || overlapVR.length === 0){
+        return;
       };
-      that.previewIsDirty = true;
-      console.log(overlapV);
-      console.log(meshVR);
-      console.log(overlapVR);
+
+      var meshAlt = findAltRange(mesh, meshVR);
+      var overlapAlt = findAltRange(overlapper.mesh, overlapVR);
+      var maxAlt = meshAlt.max > overlapAlt.max ? meshAlt.max : overlapAlt.max;
+      var minAlt = meshAlt.min < overlapAlt.min ? meshAlt.min : overlapAlt.min;
+      if(Math.abs(minAlt - maxAlt) > that.data.intersectionMaxRampHeight){
+        // No Intersection if altitude difference too great
+        return;
+      };
+
+      var curV, shapePoints, shapePointsSerial, cSerial,
+          convexHull = new ConvexHull(), hullPoints,
+          intersectionPoly;
+      shapePoints = [];
+      shapePointsSerial = [];
+      //add ramps to intersection
+      var origMeshVR = _.clone(meshVR),
+          origOverlapVR = _.clone(overlapVR),
+          minOverlapVR = _.min(overlapVR),
+          maxOverlapVR = _.max(overlapVR),
+          minMeshVR = _.min(meshVR),
+          maxMeshVR = _.max(meshVR);
+      for(var i = 1; i<that.data.intersectionRampLength; i++){
+        if(minOverlapVR - (i * overlapper.mesh.shapePointsLength) > 0){
+          overlapVR.push(minOverlapVR - (i * overlapper.mesh.shapePointsLength));
+        };
+        if(maxOverlapVR + (i * overlapper.mesh.shapePointsLength) <
+            overlapper.mesh.geometry.vertices.length){
+          overlapVR.push(maxOverlapVR + (i * overlapper.mesh.shapePointsLength));
+        };
+        if(minMeshVR - (i * mesh.shapePointsLength) > 0){
+          meshVR.push(minMeshVR - (i * mesh.shapePointsLength));
+        };
+        if(maxMeshVR + (i * mesh.shapePointsLength) <
+            mesh.geometry.vertices.length){
+          meshVR.push(maxMeshVR + (i * mesh.shapePointsLength));
+        };
+      };
+      // build intersection
+      var rampAlt = {};
+      for(var r = 0; r<overlapVR.length; r++){
+        for(var i = 1; i<overlapper.mesh.shapePointsLength - 1; i++){
+          curV = overlapper.mesh.geometry.vertices[overlapVR[r] + i];
+          cSerial = curV.x + ',' + curV.y;
+          if(shapePointsSerial.indexOf(cSerial) === -1){
+            shapePoints.push(curV.clone());
+            shapePointsSerial.push(cSerial);
+            if(rampAlt[cSerial] === undefined || rampAlt[cSerial] < curV.z){
+              rampAlt[cSerial] = curV.z;
+            };
+          };
+        };
+      };
+      for(var r = 0; r<meshVR.length; r++){
+        for(var i = 1; i<mesh.shapePointsLength -1; i++){
+          curV = mesh.geometry.vertices[meshVR[r] + i];
+          cSerial = curV.x + ',' + curV.y;
+          if(shapePointsSerial.indexOf(cSerial) === -1){
+            shapePoints.push(curV.clone());
+            shapePointsSerial.push(cSerial);
+            if(rampAlt[cSerial] === undefined || rampAlt[cSerial] < curV.z){
+              rampAlt[cSerial] = curV.z;
+            };
+          };
+        };
+      };
+      intersectionPoly = snorb.util.pointsToPolygon(shapePoints, terra.data.scale * 2);
+      //console.log(rampVI);
+      //console.log(rampAlt);
+      
+      var intersectionShape = new THREE.Shape(intersectionPoly);
+      var intersectionGeometry = new THREE.ExtrudeGeometry(intersectionShape, {
+            amount: that.data.intersectionHeight,
+            steps: 1,
+            bevelEnabled: false,
+            bevelThickness: 2,
+            bevelSize: 1,
+            bevelSegments: 1,
+            material: 1,
+            extrudeMaterial: 0
+        });
+      // adjust ramp alts
+      for(var i = 0; i<intersectionGeometry.vertices.length; i++){
+          curV = intersectionGeometry.vertices[i];
+          cSerial = curV.x + ',' + curV.y;
+          //curV.z = rampAlt[cSerial] + that.data.intersectionHeight;
+          //console.log(rampAlt[cSerial]);
+          //curV.z = 5;
+      };
+
+      var intersectionMaterials = [
+            new THREE.MeshBasicMaterial({
+              color: 0x0000ff
+            }),
+            new THREE.MeshBasicMaterial({
+              color: 0x000099
+            }),
+          ],
+          intersectionMesh = new THREE.Mesh(intersectionGeometry, 
+                               new THREE.MeshFaceMaterial(intersectionMaterials));
+      intersectionMesh.position.z = maxAlt;
+      mesh.add(intersectionMesh);
     };
 
     this.updateTerraAttributes = function(terra){

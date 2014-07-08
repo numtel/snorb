@@ -98,15 +98,8 @@
         };
     
         // Build Mesh 
-        var waterShape = new THREE.Shape();
-        for(var i = 0; i<polygon.length; i++){
-          if(i === 0){
-            waterShape.moveTo(polygon[i].x, polygon[i].y);
-          } else {
-            waterShape.lineTo(polygon[i].x, polygon[i].y);
-          };
-        };
-        var waterGeometry = new THREE.ShapeGeometry(waterShape),
+        var waterShape = new THREE.Shape(polygon),
+            waterGeometry = new THREE.ShapeGeometry(waterShape),
             waterMesh = new THREE.Mesh(waterGeometry, scene.water.material);
         waterMesh.position.z = newLevel;
         waterMesh.add(terra.scene.water.clone());
