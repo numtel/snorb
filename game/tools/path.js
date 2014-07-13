@@ -24,6 +24,7 @@
       pylonDistance: 50,
       bridgeSideColor: 0xff0000,
       bridgePylonColor: 0x990000,
+      bridgeHeightOverWater: 20,
       intersectionHeight: 2,
       intersectionRampLength: 3, // minimum: 2, units: vertex rows
       intersectionMaxRampHeight: 15
@@ -96,6 +97,7 @@
         that.buildPreview(terra);
       }else if(scene.mouseIsDown && that.draggingNew && that.startPos && pos){
         that.endPos = pos.clone();
+        that.endPos.z = that.altitudeWithWater(that.endPos, terra);
         that.buildPreview(terra);
       };
     };
@@ -118,6 +120,7 @@
           terra.object.remove(that.underConstruction);
         };
         that.startPos = that.endPos = that.midPos = that.lastPos.clone();
+        that.startPos.z = that.altitudeWithWater(that.startPos, terra);
         that.draggingNew = true;
       };
     };
@@ -322,6 +325,18 @@
       return mesh;
     };
 
+    this.altitudeWithWater = function(pos, terra){
+      var coord = terra.coord(pos),
+          alt = coord.altitude;
+      for(var i = 0; i<coord.objects.length; i++){
+        if(coord.objects[i].data.type === 'water'){
+          alt = coord.objects[i].data.altitude 
+                + that.settings.bridgeHeightOverWater;
+        };
+      };
+      return alt;
+    };
+
     this.buildPreview = function(terra){
       var startPos = that.startPos,
           endPos = that.endPos,
@@ -332,8 +347,7 @@
           startPos.y + ((endPos.y - startPos.y)/2),
           0
         );
-        var coord = terra.coord(midPos);
-        midPos.z = coord.altitude;
+        midPos.z = that.altitudeWithWater(midPos, terra);
         that.midPos = midPos;
       }else{
         midPos = new THREE.Vector3().copy(that.midPos);
@@ -417,13 +431,13 @@
       var overlap = terra.repres.checkPolygon(that.polygon);
       if(overlap.length){
         for(var i = 0; i<overlap.length; i++){
-          if(overlap[i].data.type = 'path'){
+          if(overlap[i].data.type === 'path'){
             that.buildIntersection(mesh, that.polygon, overlap[i], terra);
           };
         };
-        mesh.material.uniforms.highlight.value.copy(that.settings.pathErrorHighlight);
+//         mesh.material.uniforms.highlight.value.copy(that.settings.pathErrorHighlight);
       }else{
-        mesh.material.uniforms.highlight.value.copy(new THREE.Vector3(0,0,0));
+//         mesh.material.uniforms.highlight.value.copy(new THREE.Vector3(0,0,0));
       };
     };
 
