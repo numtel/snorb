@@ -571,17 +571,24 @@
         return shapePoints;
       };
 
-      var meshPoly = snorb.util.pointsToPolygon(
-            getShapePoints(mesh, meshVR, origMeshVR, meshRampPos), 
-            terra.data.scale * 2),
-          overlapPoly = snorb.util.pointsToPolygon(
-            getShapePoints(overlapper.mesh, overlapVR, origOverlapVR, overlapRampPos), 
-            terra.data.scale * 2),
-          centerPoly = snorb.util.pointsToPolygon(
-            getShapePoints(mesh, centerMeshVR, origMeshVR, meshRampPos).concat(
-              getShapePoints(overlapper.mesh, centerOverlapVR, origOverlapVR, overlapRampPos)), 
-            terra.data.scale * 2),
-          intersectionPoly = snorb.util.mergePolygons([meshPoly, overlapPoly, centerPoly]);
+      var shapePolygons =[
+            snorb.util.pointsToPolygon(
+              getShapePoints(mesh, meshVR, origMeshVR, meshRampPos), 
+              terra.data.scale * 2),
+            snorb.util.pointsToPolygon(
+              getShapePoints(overlapper.mesh, overlapVR, origOverlapVR, overlapRampPos), 
+              terra.data.scale * 2),
+            snorb.util.pointsToPolygon(
+              getShapePoints(mesh, centerMeshVR, origMeshVR, meshRampPos).concat(
+                getShapePoints(overlapper.mesh, centerOverlapVR, origOverlapVR, overlapRampPos)), 
+              terra.data.scale * 2)
+            ];
+      for(var i = 0; i<shapePolygons.length; i++){
+        if(shapePolygons[i].length===0){
+          return;
+        };
+      };
+      var intersectionPoly = snorb.util.mergePolygons(shapePolygons);
       if(intersectionPoly.length === 0){
         return;
       };
