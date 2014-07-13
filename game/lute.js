@@ -86,6 +86,12 @@ jQuery(function($){
                  'Mouse Wheel - Zoom',
                  'Shift - Rotate View Temporarily',
                  '',
+                 'Hotkeys (lowercase):',
+                 'n - New Map',
+                 'o - Open',
+                 's - Save',
+                 '0..9 - Select Tool',
+                 '',
                  'Games are saved in local storage.'].join('\n'));
         }),
       toolSelector = $('<select id="active-tool" />')
@@ -173,6 +179,29 @@ jQuery(function($){
   // Build initial options panel
   toolSelector.trigger('change');
   panel.appendTo('body');
+
+  // Relevant key events
+  _.each({
+    'n': actionNew,
+    'o': actionOpen,
+    's': actionSave
+  }, function(eventSpec, eventKey){
+    $(document).bind('keydown', eventKey, function(){
+      eventSpec.trigger('click');
+    });
+  });
+  // Numeric keys for tools
+  var toolOptions = toolSelector.children();
+  for(var i = 1; i<toolOptions.length; i++){
+    if(i > 9){
+      break;
+    };
+    $(document).bind('keydown', i, function(event){
+      var key = event.which - 48;
+      toolSelector.val(toolOptions.eq(key-1).attr('value'))
+        .trigger('change');
+    });
+  };
 
   loading.hide();
 });
