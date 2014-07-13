@@ -196,8 +196,11 @@ jQuery(function($){
     if(i > 9){
       break;
     };
-    $(document).bind('keydown', i, function(event){
+    $(document).bind('keydown', function(event){
       var key = event.which - 48;
+      if(key < 1 || key > 9){
+        return;
+      };
       toolSelector.val(toolOptions.eq(key-1).attr('value'))
         .trigger('change');
     });
