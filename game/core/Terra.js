@@ -33,6 +33,23 @@ snorb.core.Terra = function(scene, data){
 
 
   // Public Methods
+  this.debugBox = function(pos, color){
+    if(color === undefined){
+      color = 0x00ff00;
+    };
+    var mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(5,5,5),
+      new THREE.MeshBasicMaterial({
+        color: new THREE.Color(color),
+        transparent: true,
+        opacity: 0.5
+      })
+    );
+    mesh.position.copy(pos);
+    this.object.add(mesh);
+    return mesh;
+  };
+
   this.updateRenderDepth=function(){
     var waterDistances = [],
         curChild,

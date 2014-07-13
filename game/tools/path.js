@@ -6,6 +6,11 @@
     this.label = 'Build Path';
 
     this.defaults = {
+      pathWidth: 10
+    };
+    this.data = _.defaults(data || {}, this.defaults);
+
+    this.settings = {
       pathErrorHighlight: new THREE.Vector3(1,0,0),
       horizHandleColor: 0x00ff00,
       horizHandleGrabbedColor: 0xff0000,
@@ -15,19 +20,17 @@
       verticalHandleGap: 30,
       maxAltitudeDisplacement: 50,
       pathHeight: 5,
-      pathWidth: 10,
       bridgeHeight: 5,
       pylonDistance: 50,
       bridgeSideColor: 0xff0000,
       bridgePylonColor: 0x990000,
       intersectionHeight: 2,
-      intersectionRampLength: 3,
+      intersectionRampLength: 3, // minimum: 2, units: vertex rows
       intersectionMaxRampHeight: 15
     };
-    this.data = _.defaults(data || {}, this.defaults);
 
     this.fieldDefinitions = {
-      pathWidth: {label: 'Width', type: 'int', min: that.data.pathHeight + 1, max: 100},
+      pathWidth: {label: 'Width', type: 'int', min: that.settings.pathHeight + 1, max: 100},
       construct: {label: 'Construct', type: 'button', click: function(){
         this.finalize();
       }}
@@ -49,6 +52,10 @@
         var terra = that.underConstruction.parent.terra;
         that.underConstruction.parent.remove(that.underConstruction);
         that.underConstruction = undefined;
+        for(var i=0; i<that.handles.length; i++){
+          terra.object.remove(that.handles[i]);
+        };
+        that.handles = [];
         that.updateTerraAttributes(terra);
       };
       that.startPos = that.endPos = that.handleGrabbed = undefined;
@@ -142,7 +149,7 @@
           var thisKey = posKey;
           var handleXY = that.handleBox(new THREE.Vector3(that[thisKey].x, 
                                              that[thisKey].y, 
-                                             that[thisKey].z + that.data.horizHandleGap), 
+                                             that[thisKey].z + that.settings.horizHandleGap), 
               function(event){
                 var newPos = scene.mouse3D(
                   event.clientX, event.clientY, 'y', this.position.z);
@@ -161,30 +168,30 @@
                 this.position.x = newPos.x;
                 this.position.y = -newPos.z;
                 that[thisKey].copy(this.position);
-                that[thisKey].z -= that.data.horizHandleGap;
+                that[thisKey].z -= that.settings.horizHandleGap;
                 handleZ.position.copy(this.position);
-                handleZ.position.z += that.data.verticalHandleGap -
-                                              that.data.horizHandleGap;
+                handleZ.position.z += that.settings.verticalHandleGap -
+                                              that.settings.horizHandleGap;
               }, terra);
           var handleZ = that.handleBox(new THREE.Vector3(
             that[thisKey].x, 
             that[thisKey].y, 
-            that[thisKey].z + that.data.verticalHandleGap), 
+            that[thisKey].z + that.settings.verticalHandleGap), 
             function(event){
               var newPos = scene.mouse3D(
                 event.clientX, event.clientY, 'x', this.position.x),
-                newAlt = newPos.y - that.data.verticalHandleGap;
+                newAlt = newPos.y - that.settings.verticalHandleGap;
               if(newAlt < terra.data.minAlt){
-                newPos.y = terra.data.minAlt + that.data.verticalHandleGap;
+                newPos.y = terra.data.minAlt + that.settings.verticalHandleGap;
                 newAlt = terra.data.minAlt;
               };
               if(newAlt > terra.data.maxAlt){
-                newPos.y = terra.data.maxAlt + that.data.verticalHandleGap;
+                newPos.y = terra.data.maxAlt + that.settings.verticalHandleGap;
                 newAlt = terra.data.maxAlt;
               };
               this.position.z = newPos.y;
               that[thisKey].z = newAlt;
-              handleXY.position.z = newAlt + that.data.horizHandleGap;
+              handleXY.position.z = newAlt + that.settings.horizHandleGap;
             }, terra, true);
           that.handles.push(handleXY);
           that.handles.push(handleZ);
@@ -266,7 +273,7 @@
     };
 
     this.handleBox = function(pos, mouseHandler, terra, isVertical){
-      var color = isVertical ? that.data.horizHandleColor : that.data.verticalHandleColor;
+      var color = isVertical ? that.settings.horizHandleColor : that.settings.verticalHandleColor;
       var scale = terra.data.scale;
       var geometry;
       if(isVertical){
@@ -308,8 +315,8 @@
       );
       mesh.isVertical = isVertical;
       mesh.staticColor = color;
-      mesh.grabbedColor = isVertical ? that.data.horizHandleGrabbedColor :
-                                       that.data.verticalHandleGrabbedColor;
+      mesh.grabbedColor = isVertical ? that.settings.horizHandleGrabbedColor :
+                                       that.settings.verticalHandleGrabbedColor;
       mesh.mouseHandler = mouseHandler;
       mesh.position.copy(pos);
       return mesh;
@@ -360,9 +367,9 @@
             xVal = that.data.pathWidth /2;
           };
           if(flipCoord){
-            points.push(new THREE.Vector2(that.data.pathHeight, xVal));
+            points.push(new THREE.Vector2(that.settings.pathHeight, xVal));
           }else{
-            points.push(new THREE.Vector2(xVal, that.data.pathHeight));
+            points.push(new THREE.Vector2(xVal, that.settings.pathHeight));
           };
         };
         if(flipCoord){
@@ -381,7 +388,7 @@
       // TODO: Generalize the following temporary fix for paths that are
       //       extruded in a rotation
       if(Math.abs(Math.round(geometry.vertices[2].z - geometry.vertices[1].z)) 
-          > that.data.pathHeight){
+          > that.settings.pathHeight){
         shape = new THREE.Shape(pathShapePoints(true));
         geometry = new THREE.ExtrudeGeometry(shape, {
           steps: Math.round(length/terra.data.scale),
@@ -412,17 +419,16 @@
         for(var i = 0; i<overlap.length; i++){
           if(overlap[i].data.type = 'path'){
             that.buildIntersection(mesh, that.polygon, overlap[i], terra);
-            // find vertices nearby
-            // construct an intersection
           };
         };
-        mesh.material.uniforms.highlight.value.copy(that.data.pathErrorHighlight);
+        mesh.material.uniforms.highlight.value.copy(that.settings.pathErrorHighlight);
       }else{
         mesh.material.uniforms.highlight.value.copy(new THREE.Vector3(0,0,0));
       };
     };
 
     this.buildIntersection = function(mesh, meshPolygon, overlapper, terra){
+      // TODO: intersections overlapping eachother need to be merged!
       var overlappingVertices = function(mesh, meshPolygon, overlapper){
         var inMesh = [], inOverlapper = [];
         for(var i = 0; i<mesh.geometry.vertices.length; i++){
@@ -482,74 +488,93 @@
       var overlapAlt = findAltRange(overlapper.mesh, overlapVR);
       var maxAlt = meshAlt.max > overlapAlt.max ? meshAlt.max : overlapAlt.max;
       var minAlt = meshAlt.min < overlapAlt.min ? meshAlt.min : overlapAlt.min;
-      if(Math.abs(minAlt - maxAlt) > that.data.intersectionMaxRampHeight){
+      if(Math.abs(minAlt - maxAlt) > that.settings.intersectionMaxRampHeight){
         // No Intersection if altitude difference too great
         return;
       };
 
-      var curV, shapePoints, shapePointsSerial, cSerial,
-          convexHull = new ConvexHull(), hullPoints,
-          intersectionPoly;
-      shapePoints = [];
-      shapePointsSerial = [];
       //add ramps to intersection
       var origMeshVR = _.clone(meshVR),
           origOverlapVR = _.clone(overlapVR),
+          centerMeshVR,
+          centerOverlapVR,
           minOverlapVR = _.min(overlapVR),
           maxOverlapVR = _.max(overlapVR),
           minMeshVR = _.min(meshVR),
-          maxMeshVR = _.max(meshVR);
-      for(var i = 1; i<that.data.intersectionRampLength; i++){
-        if(minOverlapVR - (i * overlapper.mesh.shapePointsLength) > 0){
-          overlapVR.push(minOverlapVR - (i * overlapper.mesh.shapePointsLength));
+          maxMeshVR = _.max(meshVR),
+          meshRampPos = {},
+          overlapRampPos = {},
+          testVal;
+      for(var i = 1; i<that.settings.intersectionRampLength; i++){
+        // allow primary neighbor to be included in center
+        if(i === 2){
+          centerMeshVR = _.clone(meshVR);
+          centerOverlapVR = _.clone(overlapVR);
         };
-        if(maxOverlapVR + (i * overlapper.mesh.shapePointsLength) <
-            overlapper.mesh.geometry.vertices.length){
-          overlapVR.push(maxOverlapVR + (i * overlapper.mesh.shapePointsLength));
+        testVal = minOverlapVR - (i * overlapper.mesh.shapePointsLength);
+        if(testVal > 0){
+          overlapVR.push(testVal);
+          overlapRampPos[testVal] = i;
         };
-        if(minMeshVR - (i * mesh.shapePointsLength) > 0){
-          meshVR.push(minMeshVR - (i * mesh.shapePointsLength));
+        testVal = maxOverlapVR + (i * overlapper.mesh.shapePointsLength);
+        if(testVal < overlapper.mesh.geometry.vertices.length){
+          overlapVR.push(testVal);
+          overlapRampPos[testVal] = i;
         };
-        if(maxMeshVR + (i * mesh.shapePointsLength) <
-            mesh.geometry.vertices.length){
-          meshVR.push(maxMeshVR + (i * mesh.shapePointsLength));
+        testVal = minMeshVR - (i * mesh.shapePointsLength);
+        if(testVal > 0){
+          meshVR.push(testVal);
+          meshRampPos[testVal] = i;
+        };
+        testVal = maxMeshVR + (i * mesh.shapePointsLength);
+        if(testVal < mesh.geometry.vertices.length){
+          meshVR.push(testVal);
+          meshRampPos[testVal] = i;
         };
       };
       // build intersection
-      var rampAlt = {};
-      for(var r = 0; r<overlapVR.length; r++){
-        for(var i = 1; i<overlapper.mesh.shapePointsLength - 1; i++){
-          curV = overlapper.mesh.geometry.vertices[overlapVR[r] + i];
-          cSerial = curV.x + ',' + curV.y;
-          if(shapePointsSerial.indexOf(cSerial) === -1){
-            shapePoints.push(curV.clone());
-            shapePointsSerial.push(cSerial);
+      var rampAlt = {}, rampDist = {};
+      var getShapePoints = function(mesh, vertexRows, coreVertexRows, meshRampPos){
+        var curV, cSerial, shapePoints = [], shapePointsSerial = [];
+        for(var r = 0; r<vertexRows.length; r++){
+          for(var i = 1; i<mesh.shapePointsLength -1; i++){
+            curV = mesh.geometry.vertices[vertexRows[r] + i];
+            cSerial = Math.round(curV.x) + ',' + Math.round(curV.y);
+            if(shapePointsSerial.indexOf(cSerial) === -1){
+              shapePoints.push(curV.clone());
+              shapePointsSerial.push(cSerial);
+            };
             if(rampAlt[cSerial] === undefined || rampAlt[cSerial] < curV.z){
               rampAlt[cSerial] = curV.z;
             };
-          };
-        };
-      };
-      for(var r = 0; r<meshVR.length; r++){
-        for(var i = 1; i<mesh.shapePointsLength -1; i++){
-          curV = mesh.geometry.vertices[meshVR[r] + i];
-          cSerial = curV.x + ',' + curV.y;
-          if(shapePointsSerial.indexOf(cSerial) === -1){
-            shapePoints.push(curV.clone());
-            shapePointsSerial.push(cSerial);
-            if(rampAlt[cSerial] === undefined || rampAlt[cSerial] < curV.z){
-              rampAlt[cSerial] = curV.z;
+            if(coreVertexRows.indexOf(vertexRows[r]) === -1){
+              rampDist[cSerial] = meshRampPos[vertexRows[r]];
+            }else{
+              rampDist[cSerial] = 0;
             };
           };
         };
+        return shapePoints;
       };
-      intersectionPoly = snorb.util.pointsToPolygon(shapePoints, terra.data.scale * 2);
-      //console.log(rampVI);
-      //console.log(rampAlt);
-      
+
+      var meshPoly = snorb.util.pointsToPolygon(
+            getShapePoints(mesh, meshVR, origMeshVR, meshRampPos), 
+            terra.data.scale * 2),
+          overlapPoly = snorb.util.pointsToPolygon(
+            getShapePoints(overlapper.mesh, overlapVR, origOverlapVR, overlapRampPos), 
+            terra.data.scale * 2),
+          centerPoly = snorb.util.pointsToPolygon(
+            getShapePoints(mesh, centerMeshVR, origMeshVR, meshRampPos).concat(
+              getShapePoints(overlapper.mesh, centerOverlapVR, origOverlapVR, overlapRampPos)), 
+            terra.data.scale * 2),
+          intersectionPoly = snorb.util.mergePolygons([meshPoly, overlapPoly, centerPoly]);
+      if(intersectionPoly.length === 0){
+        return;
+      };
+
       var intersectionShape = new THREE.Shape(intersectionPoly);
       var intersectionGeometry = new THREE.ExtrudeGeometry(intersectionShape, {
-            amount: that.data.intersectionHeight,
+            amount: that.settings.intersectionHeight,
             steps: 1,
             bevelEnabled: false,
             bevelThickness: 2,
@@ -559,20 +584,40 @@
             extrudeMaterial: 0
         });
       // adjust ramp alts
+      var curV, cSerial;
       for(var i = 0; i<intersectionGeometry.vertices.length; i++){
           curV = intersectionGeometry.vertices[i];
-          cSerial = curV.x + ',' + curV.y;
-          //curV.z = rampAlt[cSerial] + that.data.intersectionHeight;
-          //console.log(rampAlt[cSerial]);
-          //curV.z = 5;
+          cSerial = Math.round(curV.x) + ',' + Math.round(curV.y);
+          if(rampDist[cSerial]){ 
+//             terra.debugBox(new THREE.Vector3(
+//               curV.x, curV.y, 
+//               rampAlt[cSerial] + that.settings.pathHeight));
+            if(curV.z === 0){
+              curV.z = rampAlt[cSerial] - maxAlt + that.settings.pathHeight;
+            }else{
+              curV.z += (rampDist[cSerial] / that.settings.intersectionRampLength
+                            * (rampAlt[cSerial] - maxAlt)) + 
+                        ((1- (rampDist[cSerial] / that.settings.intersectionRampLength)) 
+                            * that.settings.pathHeight);
+            };
+          }else{
+            if(rampAlt[cSerial] && curV.z === 0){
+              curV.z = rampAlt[cSerial] - maxAlt + that.settings.pathHeight;
+            };
+//             terra.debugBox(new THREE.Vector3(
+//               curV.x, curV.y, 
+//               curV.z + maxAlt), 0xff00ff);
+          };
       };
 
       var intersectionMaterials = [
             new THREE.MeshBasicMaterial({
-              color: 0x0000ff
+              color: 0x0000ff,
+              side: THREE.DoubleSide
             }),
             new THREE.MeshBasicMaterial({
-              color: 0x000099
+              color: 0x000099,
+              side: THREE.DoubleSide
             }),
           ],
           intersectionMesh = new THREE.Mesh(intersectionGeometry, 
@@ -600,7 +645,7 @@
                 if(terra.object.material.attributes.displacement.value[curCoord[ord]] < attrVal){
                   terra.object.material.attributes.displacement.value[curCoord[ord]] = attrVal;
                 };
-                if(curV.z < curCoord.altitude - that.data.maxAltitudeDisplacement){
+                if(curV.z < curCoord.altitude - that.settings.maxAltitudeDisplacement){
                   terra.object.material.attributes.translucent.value[curCoord[ord]] = 0.3;
                 };
               };
@@ -622,17 +667,17 @@
             cCoord = terra.coord(curV);
             curV.z = cCoord.altitude;
           }else{
-            curV.z -= that.data.pathHeight + that.data.bridgeHeight;
+            curV.z -= that.settings.pathHeight + that.settings.bridgeHeight;
           };
           geometry.vertices.push(curV);
         };
         for(var i = 0; i<vertices.length; i++){
           curV = vertices[i].clone();
-          curV.z -= that.data.pathHeight;
+          curV.z -= that.settings.pathHeight;
           geometry.vertices.push(curV);
         };
         var sideColor = new THREE.Color(isPylon ?
-              that.data.bridgePylonColor : that.data.bridgeSideColor);
+              that.settings.bridgePylonColor : that.settings.bridgeSideColor);
         geometry.faces.push(new THREE.Face3(0,1,4, undefined, new THREE.Color(0x000000)));
         geometry.faces.push(new THREE.Face3(1,5,4, undefined, new THREE.Color(0x000000)));
         geometry.faces.push(new THREE.Face3(3,0,7, undefined, sideColor));
@@ -656,7 +701,7 @@
       var vertices = parentMesh.geometry.vertices,
           cCoord,
           vPer = parentMesh.shapePointsLength,
-          pylonDiv = that.data.pylonDistance / terra.data.scale * vPer;
+          pylonDiv = that.settings.pylonDistance / terra.data.scale * vPer;
       for(var i = vPer; i<vertices.length-vPer; i+=vPer){
         cCoord = terra.coord(vertices[i]);
         if(vertices[i].z > cCoord.altitude){

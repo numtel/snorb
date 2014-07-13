@@ -95,3 +95,38 @@ snorb.util.pointsToPolygon = function(points, maxEdgeLength){
   return polygon;
 };
 
+snorb.util.polygonToJSTS = function(poly){
+  var output = 'POLYGON((';
+  for(var i = 0; i<poly.length; i++){
+    output += poly[i].x + ' ' + poly[i].y +
+              (i === poly.length - 1 ? '))' : ', ');
+  };
+  return output;
+};
+
+snorb.util.mergePolygons = function(polys){
+  if(!polys  || !polys.length){
+    return;
+  };
+  if(polys.length === 1){
+    return polys[0];
+  };
+
+  var jstsPolys = _.map(polys, snorb.util.polygonToJSTS),
+      reader = new jsts.io.WKTReader(),
+      merged = reader.read(jstsPolys[0]).union(reader.read(jstsPolys[1]));
+  for(var i = 2; i<jstsPolys.length; i++){
+    try{
+      merged = merged.union(reader.read(jstsPolys[i]));
+    }catch(err){
+      console.log('Error triangulating points!');
+    };
+  };
+  var polygon = [];
+  if(merged.shell !==undefined){
+    for(var i = 0; i<merged.shell.points.length; i++){
+      polygon.push({x: merged.shell.points[i].x, y: merged.shell.points[i].y});
+    };
+  };
+  return polygon;
+};
