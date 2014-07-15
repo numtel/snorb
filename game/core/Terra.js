@@ -523,7 +523,9 @@ snorb.core.Terra = function(scene, data){
   };
 
   this.buildObject = function(data){
-    scene.tools[data.rebuildTool].rebuild(this, data);
+    if(data.rebuildTool && scene.tools.hasOwnProperty(data.rebuildTool)){
+      scene.tools[data.rebuildTool].rebuild(this, data);
+    };
   };
 
   this.repres = new snorb.core.Represent(this, _.clone(data.repres));

@@ -67,6 +67,8 @@
     this.handleGrabbed;
     this.draggingNew = false;
     this.handles = [];
+    this.intersections = [];
+    this.overlappingIntersections = [];
 
     this.mousemove = function(pos, terra, event){
       that.lastPos = pos;
@@ -119,6 +121,7 @@
         if(that.underConstruction){
           terra.object.remove(that.underConstruction);
         };
+        that.resetOverlappingIntersections();
         that.startPos = that.endPos = that.midPos = that.lastPos.clone();
         that.startPos.z = that.altitudeWithWater(that.startPos, terra);
         that.draggingNew = true;
@@ -236,6 +239,7 @@
         for(var i = 0; i<that.handles.length; i++){
           terra.object.remove(that.handles[i]);
         };
+        that.resetOverlappingIntersections(true);
         var vertices = terra.object.geometry.vertices,
             attr = terra.object.material.attributes;
         for(var i = 0; i<vertices.length; i++){
@@ -249,12 +253,17 @@
         attr.translucent.needsUpdate = true;
         terra.updateVertices();
 
+        for(var i = 0; i<that.intersections.length; i++){
+          that.intersections[i].underConstruction = undefined;
+        };
+
         var mesh = that.underConstruction;
         that.buildTunnels(mesh, terra);
         that.buildBridges(mesh, terra);
 
         var representation = terra.repres.register(that.polygon);
         representation.mesh = mesh;
+        representation.intersections = that.intersections;
         representation.data.type = 'path';
         representation.data.rebuildTool = 'path';
         representation.data.startPos = that.startPos;
@@ -262,6 +271,9 @@
         representation.data.endPos = that.endPos;
         representation.data.width = that.data.pathWidth;
         representation.destroy = function(){
+          for(var i = 0; i<this.intersections.length; i++){
+            this.intersections[i].remove();
+          };
           terra.object.remove(this.mesh);
         };
         representation.highlight = function(color){
@@ -335,6 +347,17 @@
         };
       };
       return alt;
+    };
+
+    this.resetOverlappingIntersections = function(performRemoval){
+      for(var i=0; i<that.overlappingIntersections.length; i++){
+        if(performRemoval){
+          that.overlappingIntersections[i].remove();
+        }else{
+          that.overlappingIntersections[i].mesh.visible=true;
+        };
+      };
+      that.overlappingIntersections = [];
     };
 
     this.buildPreview = function(terra){
@@ -429,6 +452,7 @@
       that.updateTerraAttributes(terra);
       that.polygon = that.generatePolygon();
       var overlap = terra.repres.checkPolygon(that.polygon);
+      that.intersections = [];
       if(overlap.length){
         for(var i = 0; i<overlap.length; i++){
           if(overlap[i].data.type === 'path'){
@@ -490,6 +514,7 @@
         };
         return {min: min, max: max};
       };
+      that.resetOverlappingIntersections();
       var overlapV = overlappingVertices(mesh, meshPolygon, overlapper),
           meshVR = vertexRows(mesh, overlapV.mesh),
           overlapVR = vertexRows(overlapper.mesh, overlapV.overlap);
@@ -584,13 +609,39 @@
               terra.data.scale * 2)
             ];
       for(var i = 0; i<shapePolygons.length; i++){
-        if(shapePolygons[i].length===0){
+        if(!shapePolygons[i] || shapePolygons[i].length===0){
           return;
         };
       };
       var intersectionPoly = snorb.util.mergePolygons(shapePolygons);
       if(intersectionPoly.length === 0){
         return;
+      };
+      // Check polygon for other intersections
+      var overlap = terra.repres.checkPolygon(intersectionPoly),
+          refreshPoly = false;
+      if(overlap.length){
+        for(var i = 0; i<overlap.length; i++){
+          if(overlap[i].data.type === 'path:intersection' &&
+               overlap[i].underConstruction === undefined){
+            // Remove and merge into this geometry
+            rampDist = _.extend(rampDist, overlap[i].data.rampDist);
+            rampAlt = _.extend(rampAlt, overlap[i].data.rampAlt);
+            if(overlap[i].data.maxAlt > maxAlt){
+              maxAlt = overlap[i].data.maxAlt;
+            };
+            shapePolygons.push(overlap[i].polygon);
+            overlap[i].mesh.visible = false;
+            that.overlappingIntersections.push(overlap[i]);
+            refreshPoly = true;
+          };
+        };
+        if(refreshPoly){
+          intersectionPoly = snorb.util.mergePolygons(shapePolygons);
+          if(intersectionPoly.length === 0){
+            return;
+          };
+        };
       };
 
       var intersectionShape = new THREE.Shape(intersectionPoly);
@@ -645,6 +696,17 @@
                                new THREE.MeshFaceMaterial(intersectionMaterials));
       intersectionMesh.position.z = maxAlt;
       mesh.add(intersectionMesh);
+      var representation = terra.repres.register(intersectionPoly);
+      representation.mesh = intersectionMesh;
+      representation.underConstruction = mesh;
+      representation.data.type = 'path:intersection';
+      representation.data.rampDist = rampDist;
+      representation.data.rampAlt = rampAlt;
+      representation.data.maxAlt = maxAlt;
+      representation.destroy = function(){
+        mesh.remove(this.mesh);
+      };
+      that.intersections.push(representation);
     };
 
     this.updateTerraAttributes = function(terra){
