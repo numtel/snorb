@@ -11,7 +11,7 @@ snorb.core.Scene = function(domElementId, data){
     cursorColor: new THREE.Vector4(0.0, 0.0, 0.7, 1.0)
   };
   this.data = data = _.defaults(data || {}, this.defaults);
-  this.data.cursorColor = this.data.cursorColor.clone();
+  this.data.cursorColor = new THREE.Vector4().copy(this.data.cursorColor);
 
   this.supportWebGL = function(){
     try{
