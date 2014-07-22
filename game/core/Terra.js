@@ -148,7 +148,7 @@ snorb.core.Terra = function(scene, data){
     that.sides = newSides;
   };
 
-  this.coord = function(pos){
+  this.coord = function(pos, skipObjects){
     var x = pos.x, y = pos.y,
         xR10 = x - (x % this.data.scale),
         yR10 = y - (y % this.data.scale),
@@ -221,7 +221,7 @@ snorb.core.Terra = function(scene, data){
             propNS: propY,
             propWE: propX,
             altitude: altitude,
-            objects: that.repres.checkPoint(pos)};
+            objects: skipObjects ? undefined : that.repres.checkPoint(pos)};
   };
 
 
@@ -232,7 +232,7 @@ snorb.core.Terra = function(scene, data){
     for(var i = 0; i<mesh.geometry.vertices.length; i++){
       curV = mesh.geometry.vertices[i];
       cPos = mesh.localToWorld(curV.clone());
-      coord = this.coord(new THREE.Vector2(cPos.x, cPos.y));
+      coord = this.coord(new THREE.Vector2(cPos.x, cPos.y), true);
       allCoords.push(coord);
       _.each(['nw','ne','sw','se'], function(ord){
         if(coord[ord] !== undefined && output.indexOf(coord[ord]) === -1){
@@ -523,7 +523,9 @@ snorb.core.Terra = function(scene, data){
   };
 
   this.buildObject = function(data){
-    if(data.rebuildTool && scene.tools.hasOwnProperty(data.rebuildTool)){
+    if(data.rebuildTool && 
+        scene.tools.hasOwnProperty(data.rebuildTool) &&
+        scene.tools[data.rebuildTool].rebuild){
       scene.tools[data.rebuildTool].rebuild(this, data);
     };
   };

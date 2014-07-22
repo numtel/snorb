@@ -25,7 +25,7 @@
       bridgeSideColor: 0xff0000,
       bridgePylonColor: 0x990000,
       bridgeHeightOverWater: 20,
-      intersectionHeight: 2,
+      intersectionHeight: 5,
       intersectionRampLength: 3, // minimum: 2, units: vertex rows
       intersectionMaxRampHeight: 15
     };
@@ -377,7 +377,7 @@
       };
       var curGrabbed, material;
       if(that.underConstruction){
-        material = that.underConstruction.material;
+        //material = that.underConstruction.material;
         terra.object.remove(that.underConstruction);
         that.underConstruction = undefined;
       };
@@ -440,9 +440,17 @@
                       snorb.textureDir + 'path/road.png')},
             highlight: {type: 'v3', value: new THREE.Vector3(0.0, 0.0, 0.0)}
           },
+          attributes: {
+            translucent: {type: 'f', value: []}
+          },
           vertexShader: snorb.util.shader('pathVertex'),
-          fragmentShader: snorb.util.shader('pathFragment')
+          fragmentShader: snorb.util.shader('pathFragment'),
+          transparent: true,
+          opacity: 1
         });
+      };
+      for(var i = 0; i<geometry.vertices.length; i++){
+        material.attributes.translucent.value.push(1);
       };
       var mesh = new THREE.Mesh(geometry, material);
       //mesh.position.z += 5;
@@ -466,7 +474,6 @@
     };
 
     this.buildIntersection = function(mesh, meshPolygon, overlapper, terra){
-      // TODO: intersections overlapping eachother need to be merged!
       var overlappingVertices = function(mesh, meshPolygon, overlapper){
         var inMesh = [], inOverlapper = [];
         for(var i = 0; i<mesh.geometry.vertices.length; i++){
@@ -571,11 +578,21 @@
           meshRampPos[testVal] = i;
         };
       };
+      // Reset mesh translucency
+      for(var i = 0; i<mesh.geometry.vertices.length; i++){
+        mesh.material.attributes.translucent.value.push(1);
+      };
+      for(var i = 0; i<overlapper.mesh.geometry.vertices.length; i++){
+        overlapper.mesh.material.attributes.translucent.value.push(1);
+      };
       // build intersection
       var rampAlt = {}, rampDist = {};
       var getShapePoints = function(mesh, vertexRows, coreVertexRows, meshRampPos){
         var curV, cSerial, shapePoints = [], shapePointsSerial = [];
         for(var r = 0; r<vertexRows.length; r++){
+          mesh.material.attributes.translucent.value[vertexRows[r]] = 0;
+          mesh.material.attributes.translucent.value
+            [vertexRows[r] + mesh.shapePointsLength -1] = 0;
           for(var i = 1; i<mesh.shapePointsLength -1; i++){
             curV = mesh.geometry.vertices[vertexRows[r] + i];
             cSerial = Math.round(curV.x) + ',' + Math.round(curV.y);
@@ -583,6 +600,7 @@
               shapePoints.push(curV.clone());
               shapePointsSerial.push(cSerial);
             };
+            mesh.material.attributes.translucent.value[vertexRows[r] + i] = 0;
             if(rampAlt[cSerial] === undefined || rampAlt[cSerial] < curV.z){
               rampAlt[cSerial] = curV.z;
             };
@@ -608,6 +626,8 @@
                 getShapePoints(overlapper.mesh, centerOverlapVR, origOverlapVR, overlapRampPos)), 
               terra.data.scale * 2)
             ];
+      mesh.material.attributes.translucent.needsUpdate = true;
+      overlapper.mesh.material.attributes.translucent.needsUpdate = true;
       for(var i = 0; i<shapePolygons.length; i++){
         if(!shapePolygons[i] || shapePolygons[i].length===0){
           return;

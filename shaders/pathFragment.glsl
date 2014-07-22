@@ -5,6 +5,7 @@ uniform vec3 highlight;
 
 varying vec2 vUv;
 varying vec3 vPosition;
+varying float vTranslucent;
 
 vec3 layerColor(vec3 color1, vec3 color2, float alpha) {
   return mix(color1, color2, alpha);
@@ -17,6 +18,7 @@ void main(){
   gl_FragColor.r += highlight.r;
   gl_FragColor.g += highlight.g;
   gl_FragColor.b += highlight.b;
+  gl_FragColor.a = vTranslucent;
   gl_FragColor = normalize(gl_FragColor);
 
 }
