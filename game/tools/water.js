@@ -73,6 +73,9 @@
           pointArray.push([curV.x, curV.y]);
         };
         var polygon = snorb.util.pointsToPolygon(pointArray, terra.data.scale * 2);
+        if(polygon.length < 3){
+          return;
+        };
 
         // Check to see if space is vacant
         var overlap = terra.repres.checkPolygon(polygon),
@@ -162,6 +165,9 @@
         // Build side skirt if necessary
         var skirtMesh, curSide;
         for(var i = 0; i<edges.length; i++){
+          if(edges[i].shape.actions.length < 3){
+            continue;
+          };
           skirtMesh = new THREE.Mesh(new THREE.ShapeGeometry(edges[i].shape),
                                      that.sideSkirtMaterial);
           curSide = sideParams[edges[i].side];

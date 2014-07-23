@@ -165,7 +165,7 @@
             this.position.y = -newPos.z;
             that.path.data[thisKey].copy(this.position);
             that.path.data[thisKey].z -= that.settings.horizHandleGap;
-            that.path.refresh();
+            that.path.refresh(true);
             handleZ.position.copy(this.position);
             handleZ.position.z += that.settings.verticalHandleGap -
                                           that.settings.horizHandleGap;
@@ -188,7 +188,7 @@
             };
             this.position.z = newPos.y;
             that.path.data[thisKey].z = newAlt;
-            that.path.refresh();
+            that.path.refresh(false);
             handleXY.position.z = newAlt + that.settings.horizHandleGap;
           }, terra, true);
 

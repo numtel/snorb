@@ -25,25 +25,15 @@ snorb.core.Path = function(terra, data){
     intersectionMaxRampHeight: 15
   };
 
+
+  var pointKeys = ['start', 'mid', 'end'];
+
   var mesh,
       polygon,
       representation,
       overlappers = [];
 
-  this.reset = function(newData){
-    this.data = data = _.defaults(newData || {}, this.defaults);
-    this.refresh();
-  };
-  this.update = function(newData){
-    this.data = data = _.defaults(newData || {}, data);
-    this.refresh();
-  };
-
-  this.isBuildable = function(){
-    return true;
-  };
-
-  // Private Functions for this.refresh()
+  // Private Functions
   var dumpMesh = function(){
     if(mesh){
       var lastMesh = mesh;
@@ -76,8 +66,9 @@ snorb.core.Path = function(terra, data){
     };
     splinePoints.push(that.data.end);
     var spline = new THREE.SplineCurve3(splinePoints);
-    var pathShapePoints = function(flipCoord){
-      var width = that.data.width + that.settings.pathHeight;
+    var pathShapePoints = function(flipCoord, flipHeight){
+      var width = that.data.width + that.settings.pathHeight,
+          height = that.settings.pathHeight * (flipHeight ? -1 : 1);
       var points = [];
       if(flipCoord){
         points.push(new THREE.Vector2(0, -width / 2));
@@ -91,9 +82,9 @@ snorb.core.Path = function(terra, data){
           xVal = width /2;
         };
         if(flipCoord){
-          points.push(new THREE.Vector2(that.settings.pathHeight, xVal));
+          points.push(new THREE.Vector2(height, xVal));
         }else{
-          points.push(new THREE.Vector2(xVal, that.settings.pathHeight));
+          points.push(new THREE.Vector2(xVal, height));
         };
       };
       if(flipCoord){
@@ -114,6 +105,13 @@ snorb.core.Path = function(terra, data){
     if(Math.abs(Math.round(geometry.vertices[2].z - geometry.vertices[1].z)) 
         > that.settings.pathHeight){
       shape = new THREE.Shape(pathShapePoints(true));
+      geometry = new THREE.ExtrudeGeometry(shape, {
+        steps: Math.round(length/terra.data.scale),
+        bevelEnabled: false,
+        extrudePath: spline
+      });
+    }else if(geometry.vertices[2].z > splinePoints[0].z){
+      shape = new THREE.Shape(pathShapePoints(false, true));
       geometry = new THREE.ExtrudeGeometry(shape, {
         steps: Math.round(length/terra.data.scale),
         bevelEnabled: false,
@@ -168,7 +166,7 @@ snorb.core.Path = function(terra, data){
           serialized.push(cSer);
         };
       };
-      var newPolygon = snorb.util.pointsToPolygon(pointArray, terra.data.scale * 2);
+      var newPolygon = snorb.util.pointsToPolygonGPC(pointArray, terra.data.scale * 2);
       if(newPolygon.length > 2){
         return newPolygon;
       };
@@ -314,30 +312,81 @@ snorb.core.Path = function(terra, data){
     var vertices = mesh.geometry.vertices,
         cCoord,
         vPer = mesh.shapePointsLength,
-        lastWasTunnel = false;
+        lastWasTunnel = false,
+        normalize = function(vi){
+          if(vi < 0){
+            return 0;
+          }else if(vi > vertices.length-1){
+            return vertices.length - 1;
+          };
+          return vi;
+        };
     for(var i = vPer; i<vertices.length-vPer; i+=vPer){
       cCoord = terra.coord(vertices[i]);
       if(vertices[i].z < cCoord.altitude){
         if(lastWasTunnel === false){
-          mesh.add(boxMesh([vertices[i-vPer], vertices[i-1],
-                                  vertices[i+vPer - 1], vertices[i]]));
+          mesh.add(boxMesh([vertices[normalize(i-vPer-vPer)], 
+                            vertices[normalize(i-vPer-1)],
+                            vertices[normalize(i + vPer + vPer - 1)], 
+                            vertices[normalize(i + vPer)]]));
         };
         lastWasTunnel = true;
       }else if(lastWasTunnel === true){
-        mesh.add(boxMesh([vertices[i-vPer], vertices[i-1],
-                                vertices[i+vPer - 1], vertices[i]]));
+        mesh.add(boxMesh([vertices[normalize(i-vPer-vPer)], 
+                          vertices[normalize(i-vPer-1)],
+                          vertices[normalize(i+vPer+vPer - 1)], 
+                          vertices[normalize(i+vPer)]]));
         lastWasTunnel = false;
       };
     };
   };
+  var ensureDataTypes = function(){
+    _.each(pointKeys, function(key){
+      // Check for THREE.Vector3
+      if(that.data[key] && !that.data[key].__proto__.hasOwnProperty('equals')){
+        that.data[key] = (new THREE.Vector3()).copy(that.data[key]);
+      };
+    });
+  };
+  var snapEnds = function(){
+    // TODO: find overlapping paths within x distance from start and end points
+    // and adjust the points
+  };
+  var didXYChange = function(a, b){
+    var changed = false;
+    _.each(pointKeys, function(key){
+      if(!a[key] || !b[key] || a[key].x !== b[key].x || a[key].y !== b[key].y){
+        changed = true;
+      };
+    });
+    return changed;
+  };
 
-  // Public functions
-  this.refresh = function(){
+  // Public methods
+  this.reset = function(newData){
+    this.data = data = _.defaults(newData || {}, this.defaults);
+    this.refresh(true);
+  };
+  this.update = function(newData){
+    var updatePolygon = didXYChange(newData, data);
+    this.data = data = _.defaults(newData || {}, data);
+    this.refresh(updatePolygon);
+  };
+
+  this.isBuildable = function(){
+    return true;
+  };
+
+  this.refresh = function(updatePolygon){
+    ensureDataTypes();
+    snapEnds();
     // Remove old mesh if exists
     var lastMesh = dumpMesh();
     // Build new mesh
     mesh = buildMesh(lastMesh ? lastMesh.material : undefined);
-    polygon = generatePolygon();
+    if(updatePolygon){
+      polygon = generatePolygon();
+    };
     updateTerraAttributes();
     buildBridges();
   };

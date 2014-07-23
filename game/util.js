@@ -60,8 +60,10 @@ snorb.util.pointsToPolygon = function(points, maxEdgeLength){
     };
     points = pointsAsArray;
   };
+  console.time('delaunay triangulation');
   var triangles = Delaunay.triangulate(points),
       polys = [];
+  console.timeEnd('delaunay triangulation');
   for(var i = triangles.length; i; i-=3){
     if(dist(triangles[i-1], triangles[i-2]) < maxEdgeLength &&
        dist(triangles[i-3], triangles[i-2]) < maxEdgeLength &&
@@ -79,6 +81,7 @@ snorb.util.pointsToPolygon = function(points, maxEdgeLength){
   };
   var reader = new jsts.io.WKTReader(),
       merged = reader.read(polys[0]).union(reader.read(polys[1]));
+  console.time('mergization');
   for(var i = 2; i<polys.length; i++){
     try{
       merged = merged.union(reader.read(polys[i]));
@@ -86,10 +89,77 @@ snorb.util.pointsToPolygon = function(points, maxEdgeLength){
       console.log('Error triangulating points!');
     };
   };
+  console.timeEnd('mergization');
   var polygon = [];
   if(merged.shell !==undefined){
     for(var i = 0; i<merged.shell.points.length; i++){
       polygon.push({x: merged.shell.points[i].x, y: merged.shell.points[i].y});
+    };
+  };
+  return polygon;
+};
+
+snorb.util.pointsToPolygonGPC = function(points, maxEdgeLength){
+  // Points array can contain either [x, y] or {x:x, y:y}.
+  // Theoretical maxEdgeLength is terra.data.scale * sqrt(2) but due to
+  // floating point noise, terra.data.scale * 2 is a better value.
+  var dist = function(a, b){
+    return Math.sqrt(Math.pow(points[a][0] - points[b][0], 2) + 
+            Math.pow(points[a][1] - points[b][1], 2));
+  };
+  if(!points.length){
+    return undefined;
+  };
+  // Accept points as [x, y] or {x: x, y: y}
+  if(!(points[0] instanceof Array)){
+    var pointsAsArray = [];
+    for(var i = 0; i<points.length; i++){
+      pointsAsArray.push([points[i].x, points[i].y]);
+    };
+    points = pointsAsArray;
+  };
+  console.time('delaunay triangulation');
+  var triangles = Delaunay.triangulate(points),
+      polys = [],
+      createPoly = function(points){
+        var res  = new gpcas.geometry.PolyDefault();
+        for(var i=0 ; i < points.length ; i++) {    
+            res.addPoint(new gpcas.geometry.Point(points[i][0],points[i][1]));
+        }
+        return res;
+      };
+  console.timeEnd('delaunay triangulation');
+  for(var i = triangles.length; i; i-=3){
+    if(dist(triangles[i-1], triangles[i-2]) < maxEdgeLength &&
+       dist(triangles[i-3], triangles[i-2]) < maxEdgeLength &&
+       dist(triangles[i-1], triangles[i-3]) < maxEdgeLength){
+      polys.push(createPoly([
+        points[triangles[i-1]],
+        points[triangles[i-2]],
+        points[triangles[i-3]]
+      ]));
+    };
+  };
+  if(polys.length < 2){
+    return undefined;
+  };
+//   var reader = new jsts.io.WKTReader(),
+//       merged = reader.read(polys[0]).union(reader.read(polys[1]));
+  console.time('mergization');
+  var merged = polys[0].union(polys[1]);
+  for(var i = 2; i<polys.length; i++){
+    try{
+      merged = merged.union(polys[i]);
+    }catch(err){
+      console.log('Error triangulating points!');
+    };
+  };
+  console.timeEnd('mergization');
+  var polygon = [];
+  if(merged !==undefined){
+    var mergedPoints = merged.m_List._array[0].m_List._array;
+    for(var i = 0; i<mergedPoints.length; i++){
+      polygon.push({x: mergedPoints[i].x, y: mergedPoints[i].y});
     };
   };
   return polygon;
