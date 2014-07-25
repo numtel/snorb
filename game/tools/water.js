@@ -229,7 +229,7 @@
         var raiseAtCursor = function(){
           if(pos !== undefined){
             that.adjustWaterLevel(terra, pos, that.data.amount * ordinal);
-          }
+          };
         };
         that.mouseup();
         that.activeInterval = setInterval(raiseAtCursor, 100);
@@ -239,7 +239,7 @@
         if(that.activeInterval){
           clearInterval(that.activeInterval);
           delete that.activeInterval;
-        }
+        };
       };
     };
     waterTool.prototype = new snorb.core.Tool();

@@ -60,10 +60,8 @@ snorb.util.pointsToPolygon = function(points, maxEdgeLength){
     };
     points = pointsAsArray;
   };
-  console.time('delaunay triangulation');
   var triangles = Delaunay.triangulate(points),
       polys = [];
-  console.timeEnd('delaunay triangulation');
   for(var i = triangles.length; i; i-=3){
     if(dist(triangles[i-1], triangles[i-2]) < maxEdgeLength &&
        dist(triangles[i-3], triangles[i-2]) < maxEdgeLength &&
@@ -81,7 +79,7 @@ snorb.util.pointsToPolygon = function(points, maxEdgeLength){
   };
   var reader = new jsts.io.WKTReader(),
       merged = reader.read(polys[0]).union(reader.read(polys[1]));
-  console.time('mergization');
+  console.time('jsts mergization');
   for(var i = 2; i<polys.length; i++){
     try{
       merged = merged.union(reader.read(polys[i]));
@@ -89,7 +87,7 @@ snorb.util.pointsToPolygon = function(points, maxEdgeLength){
       console.log('Error triangulating points!');
     };
   };
-  console.timeEnd('mergization');
+  console.timeEnd('jsts mergization');
   var polygon = [];
   if(merged.shell !==undefined){
     for(var i = 0; i<merged.shell.points.length; i++){
@@ -118,7 +116,6 @@ snorb.util.pointsToPolygonGPC = function(points, maxEdgeLength){
     };
     points = pointsAsArray;
   };
-  console.time('delaunay triangulation');
   var triangles = Delaunay.triangulate(points),
       polys = [],
       createPoly = function(points){
@@ -128,7 +125,6 @@ snorb.util.pointsToPolygonGPC = function(points, maxEdgeLength){
         }
         return res;
       };
-  console.timeEnd('delaunay triangulation');
   for(var i = triangles.length; i; i-=3){
     if(dist(triangles[i-1], triangles[i-2]) < maxEdgeLength &&
        dist(triangles[i-3], triangles[i-2]) < maxEdgeLength &&
@@ -141,11 +137,9 @@ snorb.util.pointsToPolygonGPC = function(points, maxEdgeLength){
     };
   };
   if(polys.length < 2){
-    return undefined;
+    return;
   };
-//   var reader = new jsts.io.WKTReader(),
-//       merged = reader.read(polys[0]).union(reader.read(polys[1]));
-  console.time('mergization');
+  console.time('gpc mergization');
   var merged = polys[0].union(polys[1]);
   for(var i = 2; i<polys.length; i++){
     try{
@@ -154,7 +148,7 @@ snorb.util.pointsToPolygonGPC = function(points, maxEdgeLength){
       console.log('Error triangulating points!');
     };
   };
-  console.timeEnd('mergization');
+  console.timeEnd('gpc mergization');
   var polygon = [];
   if(merged !==undefined){
     var mergedPoints = merged.m_List._array[0].m_List._array;
