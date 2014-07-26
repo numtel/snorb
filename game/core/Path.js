@@ -21,11 +21,11 @@ snorb.core.Path = function(terra, data){
     bridgePylonColor: 0x990000,
     bridgeHeightOverWater: 20,
     snapRadius: 20,
-    intersectionHeight: 5,
     intersectionRampLength: 3, // minimum: 2, units: vertex rows
     intersectionMaxRampHeight: 15
   };
 
+  this.intersectionVertices = {};
 
   var pointKeys = ['start', 'mid', 'end'];
 
@@ -153,6 +153,7 @@ snorb.core.Path = function(terra, data){
     var newMesh = new THREE.Mesh(form.geometry, material);
     newMesh.shapePointsLength = form.extrusion.actions.length;
     newMesh.pathWidth = that.data.width;
+    newMesh.path = that;
     terra.object.add(newMesh);
     return newMesh;
   };
@@ -579,13 +580,6 @@ snorb.core.Path = function(terra, data){
           meshRampPos[testVal] = i;
         };
       };
-      // Reset mesh translucency
-      for(var i = 0; i<mesh.geometry.vertices.length; i++){
-        mesh.material.attributes.translucent.value[i] = 1;
-      };
-      for(var i = 0; i<overlapper.mesh.geometry.vertices.length; i++){
-        overlapper.mesh.material.attributes.translucent.value[i] = 1;
-      };
       // build intersection
       var rampAlt = {}, rampDist = {};
       
@@ -615,6 +609,17 @@ snorb.core.Path = function(terra, data){
         };
         return shapePoints;
       };
+      var getMeshVertices = function(mesh, vertexRows){
+        var curV, cSerial, v = [];
+        for(var r = 0; r<vertexRows.length; r++){
+          v.push(vertexRows[r]);
+          v.push(vertexRows[r] + mesh.shapePointsLength -1);
+          for(var i = 1; i<mesh.shapePointsLength -1; i++){
+            v.push(vertexRows[r] + i);
+          };
+        };
+        return v;
+      };
 
       var shapePolygons =[
             snorb.util.pointsToPolygon(
@@ -641,7 +646,11 @@ snorb.core.Path = function(terra, data){
       };
       // Check polygon for other intersections
       var overlap = terra.repres.checkPolygon(intersectionPoly),
-          refreshPoly = false;
+          refreshPoly = false,
+          pathMeshes = [
+            {mesh: mesh, vertices: getMeshVertices(mesh, meshVR)},
+            {mesh: overlapper.mesh, vertices: getMeshVertices(overlapper.mesh, overlapVR)}
+          ];
       if(overlap.length){
         for(var i = 0; i<overlap.length; i++){
           if(overlap[i].data.type === 'path:intersection' &&
@@ -654,6 +663,7 @@ snorb.core.Path = function(terra, data){
             };
             shapePolygons.push(overlap[i].polygon);
             overlap[i].mesh.visible = false;
+            pathMeshes = pathMeshes.concat(overlap[i].pathMeshes);
             overlappingIntersections.push(overlap[i]);
             refreshPoly = true;
           };
@@ -668,7 +678,7 @@ snorb.core.Path = function(terra, data){
 
       var intersectionShape = new THREE.Shape(intersectionPoly);
       var intersectionGeometry = new THREE.ExtrudeGeometry(intersectionShape, {
-            amount: that.settings.intersectionHeight,
+            amount: that.settings.pathHeight,
             steps: 1,
             bevelEnabled: false,
             bevelThickness: 2,
@@ -678,29 +688,19 @@ snorb.core.Path = function(terra, data){
             extrudeMaterial: 0
         });
       // adjust ramp alts
+      var buildAlt = (minAlt + maxAlt) / 2;
       var curV, cSerial;
       for(var i = 0; i<intersectionGeometry.vertices.length; i++){
           curV = intersectionGeometry.vertices[i];
           cSerial = Math.round(curV.x) + ',' + Math.round(curV.y);
           if(rampDist[cSerial]){ 
-//             terra.debugBox(new THREE.Vector3(
-//               curV.x, curV.y, 
-//               rampAlt[cSerial] + that.settings.pathHeight));
-            if(curV.z === 0){
-              curV.z = rampAlt[cSerial] - maxAlt + that.settings.pathHeight;
-            }else{
-              curV.z += (rampDist[cSerial] / that.settings.intersectionRampLength
-                            * (rampAlt[cSerial] - maxAlt)) + 
-                        ((1- (rampDist[cSerial] / that.settings.intersectionRampLength)) 
-                            * that.settings.pathHeight);
-            };
+            // Vertex is on ramp
+            var zAdj = rampDist[cSerial] / that.settings.intersectionRampLength
+                            * (rampAlt[cSerial] - buildAlt);
+            curV.z += zAdj + buildAlt;
           }else{
-            if(rampAlt[cSerial] && curV.z === 0){
-              curV.z = rampAlt[cSerial] - maxAlt + that.settings.pathHeight;
-            };
-//             terra.debugBox(new THREE.Vector3(
-//               curV.x, curV.y, 
-//               curV.z + maxAlt), 0xff00ff);
+            // Vertex is at center
+            curV.z += buildAlt;
           };
       };
 
@@ -716,27 +716,35 @@ snorb.core.Path = function(terra, data){
           ],
           intersectionMesh = new THREE.Mesh(intersectionGeometry, 
                                new THREE.MeshFaceMaterial(intersectionMaterials));
-      intersectionMesh.position.z = maxAlt;
       mesh.add(intersectionMesh);
       var representation = terra.repres.register(intersectionPoly);
       representation.mesh = intersectionMesh;
       representation.underConstruction = mesh;
-      representation.pathMeshes = [mesh, overlapper.mesh]
-                                    .concat(overlappingIntersections);
+      pathMeshes.forEach(function(pathMesh){
+        pathMesh.mesh.path.intersectionVertices[representation.key] = pathMesh.vertices;
+        pathMesh.mesh.path.resetIntersectionAttr();
+      });
+      representation.pathMeshes = pathMeshes;
       representation.data.type = 'path:intersection';
       representation.data.rampDist = rampDist;
       representation.data.rampAlt = rampAlt;
       representation.data.maxAlt = maxAlt;
       representation.destroy = function(){
-//         this.pathMeshes.forEach(function(pathMesh){
-//           for(var i = 0; i<mesh.geometry.vertices.length; i++){
-//             mesh.material.attributes.translucent.value[i] = 1;
-//           };
-//         });
+        var curPath;
+        for(var i = 0; i<this.pathMeshes.length; i++){
+          curPath = this.pathMeshes[i].mesh.path;
+          curPath.intersectionVertices[this.key] = undefined;
+          curPath.resetIntersectionAttr();
+        };
         mesh.remove(this.mesh);
       };
       intersections.push(representation);
     };
+    // remove current intersections
+    for(var i = 0; i<intersections.length; i++){
+      intersections[i].remove();
+    };
+    // build intersections
     var overlap = terra.repres.checkPolygon(that.polygon);
     if(overlap.length){
       for(var i = 0; i<overlap.length; i++){
@@ -745,6 +753,24 @@ snorb.core.Path = function(terra, data){
         };
       };
     };
+  };
+
+  this.resetIntersectionAttr = function(){
+    var attr = mesh.material.attributes.translucent.value;
+    for(var i = 0; i<mesh.geometry.vertices.length; i++){
+      attr[i] = 1;
+    };
+    _.each(that.intersectionVertices, function(vertices, key){
+      if(vertices !== undefined){
+        if(terra.repres.data.objects.hasOwnProperty(key)){
+          for(var i = 0; i<vertices.length; i++){
+            attr[vertices[i]] = 0;
+          };
+        }else{
+          that.intersectionVertices[key] = undefined;
+        };
+      };
+    });
   };
 
 
