@@ -11,7 +11,9 @@ snorb.core.Terra = function(scene, data){
     scale: 10,
     altitude: 100,
     minAlt: 0,
-    maxAlt: 300
+    maxAlt: 300,
+    sideColor: 0x333333,
+    bottomColor: 0x111111
   };
   this.data = data = _.defaults(data || {}, this.defaults);
 
@@ -52,26 +54,32 @@ snorb.core.Terra = function(scene, data){
 
   this.updateRenderDepth=function(){
     var waterDistances = [],
-        curChild,
+        objDistances = [],
         distance;
-    for(var i=0; i<this.object.children.length; i++){
-      curChild = this.object.children[i];
-      if(curChild.representation && curChild.representation.data.type === 'water'){
-        distance = Math.sqrt(
-          Math.pow(curChild.position.x - scene.data.cameraPosition.x, 2) +
-          Math.pow(curChild.position.y - scene.data.cameraPosition.z, 2)
-        );
-        waterDistances.push({d: distance, i: i});
+    _.each(this.repres.data.objects, function(representation, represKey){
+      distance = Math.sqrt(
+        Math.pow(representation.mesh.position.x - scene.data.cameraPosition.x, 2) +
+        Math.pow(representation.mesh.position.y - scene.data.cameraPosition.z, 2)
+      );
+      if(representation.data.type === 'water'){
+        waterDistances.push({d: distance, key: represKey});
+      }else{
+        objDistances.push({d: distance, key: represKey});
       };
-    };
-    var waterSorted = _.sortBy(waterDistances, 'd');
+    });
+    var waterSorted = _.sortBy(waterDistances, 'd'),
+        objSorted = _.sortBy(objDistances, 'd');
     // Ground is furthest
-    this.object.renderDepth = waterSorted.length + 1;
+    this.object.renderDepth = waterSorted.length + objSorted.length + 1;
     // Then the water
     for(var i=0; i<waterSorted.length; i++){
-      this.object.children[waterSorted[i].i].renderDepth = waterSorted.length - i;
+      this.repres.data.objects[waterSorted[i].key].mesh.renderDepth = 
+        waterSorted.length + objSorted.length - i;
     };
-    // Seems to work fine just sorting ground and water, no need for all objects
+    // Lastly, all other objects
+    for(var i=0; i<objSorted.length; i++){
+      this.repres.data.objects[objSorted[i].key].mesh.renderDepth = objSorted.length - i;
+    };
   };
 
 
@@ -85,10 +93,10 @@ snorb.core.Terra = function(scene, data){
       [that.data.size.x, ((that.data.size.x+1) * (that.data.size.y+1)), 
         that.data.size.x+1, 'y', -1, 1]],
       sideMaterial = new THREE.MeshBasicMaterial({
-        color: new THREE.Color(0x333333),
+        color: new THREE.Color(that.data.sideColor),
         side: THREE.DoubleSide}),
       bottomMaterial = new THREE.MeshBasicMaterial({
-        color: new THREE.Color(0x111111),
+        color: new THREE.Color(that.data.bottomColor),
         side: THREE.BackSide}),
       vertices = geometry.vertices,
       sidePoints, curV, 
@@ -532,6 +540,7 @@ snorb.core.Terra = function(scene, data){
 
   this.repres = new snorb.core.Represent(this, _.clone(data.repres));
   this.repres.buildObjectsInData();
+  this.updateRenderDepth();
 
 };
 snorb.core.Terra.prototype = new snorb.core.State();
