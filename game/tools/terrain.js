@@ -122,6 +122,9 @@
       };
       this.mouseup = function(pos, terra, event){
         if(that.activeInterval){
+          if(terra) {
+            terra.rebuildMesh(true);
+          };
           clearInterval(that.activeInterval);
           delete that.activeInterval;
         }

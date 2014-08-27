@@ -38,7 +38,8 @@ snorb.core.Scene = function(domElementId, data){
 
   this.domElement.appendChild(this.renderer.domElement);
 
-  this.object = new THREE.Scene();
+  this.object = new Physijs.Scene();
+  this.object.setGravity(new THREE.Vector3( 0, -30, 0 ));
 
   var aspectRatio = window.innerWidth / window.innerHeight;
   this.camera = new THREE.PerspectiveCamera(55, aspectRatio, 0.5, 3000000);
@@ -119,6 +120,7 @@ snorb.core.Scene = function(domElementId, data){
   requestAnimationFrame(function animate(nowMsec){
     requestAnimationFrame(animate);
     that.update();
+    that.object.simulate(undefined, 2);
   });
 
   this.resize = function(){

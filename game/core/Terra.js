@@ -6,7 +6,7 @@ snorb.core.Terra = function(scene, data){
   this.scene = scene;
 
   this.defaults = {
-    size: new THREE.Vector2(150, 100),
+    size: new THREE.Vector2(100, 100),
     position: new THREE.Vector3(0, 0, 0),
     scale: 10,
     altitude: 100,
@@ -446,6 +446,9 @@ snorb.core.Terra = function(scene, data){
     lights: true,
     transparent: true
   });
+  // Physijs-ify material (material, friction, restitution)
+  material = Physijs.createMaterial(material, 0.8, 0.4);
+
   var vertexCount = (this.data.size.x + 1) * (this.data.size.y + 1);
   for(var i=0; i<vertexCount; i++){
     material.attributes.foliage.value.push(0);
@@ -465,11 +468,19 @@ snorb.core.Terra = function(scene, data){
 
   var geometry;
 
-  this.rebuildMesh = function(){
+  this.rebuildMesh = function(keepGeometry){
     if(this.object){
       scene.object.remove(this.object);
       scene.terraMesh.splice(scene.terraMesh.indexOf(this.object), 1);
     };
+
+    if(keepGeometry){
+      data.altitude = [];
+      for(var i = 0; i<geometry.vertices.length; i++){
+        data.altitude.push(geometry.vertices[i].z);
+      };
+    };
+
     geometry = new THREE.PlaneGeometry(
       this.data.size.x * this.data.scale,
       this.data.size.y * this.data.scale,
@@ -487,7 +498,10 @@ snorb.core.Terra = function(scene, data){
     geometry.computeFaceNormals();
     geometry.computeVertexNormals();
 
-    this.object = new THREE.Mesh(geometry, material);
+    // mass 0 (infinite), xdiv, ydiv
+    console.log('newd');
+    this.object = new Physijs.HeightfieldMesh(geometry, material, 
+                        0, this.data.size.x, this.data.size.y);
     this.object.rotation.x = -Math.PI / 2;
     this.object.position.copy(data.position);
     data.position = this.object.position;
