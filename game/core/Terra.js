@@ -499,7 +499,6 @@ snorb.core.Terra = function(scene, data){
     geometry.computeVertexNormals();
 
     // mass 0 (infinite), xdiv, ydiv
-    console.log('newd');
     this.object = new Physijs.HeightfieldMesh(geometry, material, 
                         0, this.data.size.x, this.data.size.y);
     this.object.rotation.x = -Math.PI / 2;

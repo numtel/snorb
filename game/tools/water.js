@@ -66,15 +66,30 @@
         if(indentVertices.length < 2){
           return;
         };
-       
-        var pointArray = [], curV; 
-        for(var i = 0; i<indentVertices.length; i++){
-          curV = terra.object.geometry.vertices[indentVertices[i]];
-          pointArray.push([curV.x, curV.y]);
-        };
-        var polygon = snorb.util.pointsToPolygon(pointArray, terra.data.scale * 2);
-        if(polygon.length < 3){
-          return;
+
+        var polygon;
+        if(indentVertices.length === terra.object.geometry.vertices.length){
+          // Water covers entire terrain, save some time here
+          polygon = [
+            {x: terra.data.size.x * terra.data.scale * -0.5,
+             y: terra.data.size.y * terra.data.scale * -0.5},
+            {x: terra.data.size.x * terra.data.scale * 0.5,
+             y: terra.data.size.y * terra.data.scale * -0.5},
+            {x: terra.data.size.x * terra.data.scale * 0.5,
+             y: terra.data.size.y * terra.data.scale * 0.5},
+            {x: terra.data.size.x * terra.data.scale * -0.5,
+             y: terra.data.size.y * terra.data.scale * 0.5}
+          ];
+        }else{
+          var pointArray = [], curV; 
+          for(var i = 0; i<indentVertices.length; i++){
+            curV = terra.object.geometry.vertices[indentVertices[i]];
+            pointArray.push([curV.x, curV.y]);
+          };
+          var polygon = snorb.util.pointsToPolygon(pointArray, terra.data.scale * 2);
+          if(polygon.length < 3){
+            return;
+          };
         };
 
         // Check to see if space is vacant

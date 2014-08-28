@@ -42,6 +42,91 @@ snorb.util.randomString = function(length){
 };
 
 snorb.util.pointsToPolygon = function(points, maxEdgeLength){
+  console.time('homebrewed mergization');
+
+  // Distance between two points [0,0] or index of point from passed points array
+  var dist = function(a, b){
+    if(typeof a === "number"){
+      a = points[a];
+    };
+    if(typeof b === "number"){
+      b = points[b];
+    };
+    return Math.sqrt(Math.pow(a[0] - b[0], 2) + 
+            Math.pow(a[1] - b[1], 2));
+  };
+  if(!points.length){
+    return undefined;
+  };
+  // Accept points as [x, y] or {x: x, y: y}
+  if(!(points[0] instanceof Array)){
+    var pointsAsArray = [];
+    for(var i = 0; i<points.length; i++){
+      pointsAsArray.push([points[i].x, points[i].y]);
+    };
+    points = pointsAsArray;
+  };
+
+  // Determine triangle frequency per point
+  var pointFreq = [];
+  points.forEach(function(v){
+    pointFreq.push(0);
+  });
+  var triangles = Delaunay.triangulate(points);
+  for(var i = triangles.length; i; i-=3){
+    if(dist(triangles[i-1], triangles[i-2]) < maxEdgeLength &&
+       dist(triangles[i-3], triangles[i-2]) < maxEdgeLength &&
+       dist(triangles[i-1], triangles[i-3]) < maxEdgeLength){
+      pointFreq[triangles[i-1]]++;
+      pointFreq[triangles[i-2]]++;
+      pointFreq[triangles[i-3]]++;
+    };
+  };
+  
+  // Points that are used in 3 or fewer triangles exist on the boundary
+  var output =[];
+  pointFreq.forEach(function(freq, i){
+    if(freq<4){
+      output.push(points[i]);
+    };
+  });
+  
+  // Sort points by looping around by each next closest point
+  var sorted = [];
+  while(output.length>0){
+    var nextPoint = output.pop(),
+        lastPoint = sorted[sorted.length-1];
+    if(lastPoint === undefined || 
+       nextPoint[0] !== lastPoint[0] || 
+       nextPoint[1] !== lastPoint[1]){
+      sorted.push(nextPoint);
+      lastPoint = nextPoint;
+    };
+    output=output.sort(function(a,b){
+      var distA =dist(lastPoint, a),
+          distB =dist(lastPoint, b);
+      if(distA < distB){
+        return 1;
+      }else if(distA === distB){
+        return 0;
+      };
+      return -1;
+    });
+  };
+  
+  //sorted=simplifyPath(sorted,0.1);
+
+  console.timeEnd('homebrewed mergization');
+  // Convert points back to {x,y}
+  return sorted.map(function(p){
+    return {x: p[0], y: p[1]};
+  });
+
+  
+};
+
+
+snorb.util.pointsToPolygon_jsts = function(points, maxEdgeLength){
   // Points array can contain either [x, y] or {x:x, y:y}.
   // Theoretical maxEdgeLength is terra.data.scale * sqrt(2) but due to
   // floating point noise, terra.data.scale * 2 is a better value.
