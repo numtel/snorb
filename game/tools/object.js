@@ -115,6 +115,12 @@
       mesh.geometry.computeBoundingBox();
       mesh.position.y -= mesh.geometry.boundingBox.min.y - (terra.data.scale * 3);
       terra.scene.object.add(mesh);
+      terra.scene.addUpdateFunction(function(key){
+        if(mesh.position.y < terra.data.position.y){
+          terra.scene.object.remove(mesh);
+          delete terra.scene.onUpdate[key];
+        };
+      });
     };
 
     this.mouseup = function(pos, terra, event){

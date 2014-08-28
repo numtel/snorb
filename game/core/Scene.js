@@ -13,6 +13,8 @@ snorb.core.Scene = function(domElementId, data){
   this.data = data = _.defaults(data || {}, this.defaults);
   this.data.cursorColor = new THREE.Vector4().copy(this.data.cursorColor);
 
+  this.onUpdate = {};
+
   this.supportWebGL = function(){
     try{
       var aCanvas = document.createElement('canvas');
@@ -111,10 +113,19 @@ snorb.core.Scene = function(domElementId, data){
     that.renderer.render(that.object, that.camera);
   };
 
+  this.addUpdateFunction = function(f){
+    var key;
+    while(key === undefined || that.onUpdate.hasOwnProperty(key)){
+      key = snorb.util.randomString();
+    };
+    that.onUpdate[key] = f;
+  };
+
   this.update = function(){
     that.water.material.uniforms.time.value += 1.0 / 60.0;
     that.controls.update();
     that.display();
+    _.each(that.onUpdate, function(f, key){f(key);});
   };
 
   requestAnimationFrame(function animate(nowMsec){
