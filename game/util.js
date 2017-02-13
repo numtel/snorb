@@ -41,6 +41,14 @@ snorb.util.randomString = function(length){
   return text;
 };
 
+snorb.util.fillArray = function(value, count) {
+  var out = [];
+  for(var i=0; i<count; i++) {
+    out.push(value);
+  }
+  return out;
+};
+
 snorb.util.pointsToPolygon = function(points, maxEdgeLength){
   console.time('homebrewed mergization');
 

@@ -436,11 +436,6 @@ snorb.core.Terra = function(scene, data){
       ring_center: { type: 'v3', value: new THREE.Vector3() },
       ring_radius: { type: 'f', value: 50.0 }
     },
-    attributes: {
-      foliage: { type: 'f', value: [] },
-      displacement: { type: 'f', value: [] },
-      translucent: { type: 'f', value: [] }
-    },
     vertexShader: snorb.util.shader('groundVertex'),
     fragmentShader: snorb.util.shader('groundFragment'),
     lights: true,
@@ -450,11 +445,13 @@ snorb.core.Terra = function(scene, data){
   material = Physijs.createMaterial(material, 0.8, 0.4);
 
   var vertexCount = (this.data.size.x + 1) * (this.data.size.y + 1);
-  for(var i=0; i<vertexCount; i++){
-    material.attributes.foliage.value.push(0);
-    material.attributes.displacement.value.push(0);
-    material.attributes.translucent.value.push(1);
-  };
+
+  var attributes = {
+    foliage: snorb.util.fillArray(0, vertexCount),
+    displacement: snorb.util.fillArray(0, vertexCount),
+    translucent: snorb.util.fillArray(1, vertexCount)
+  }
+
   var setRepeat = function(textureKey, value){
     material.uniforms[textureKey].value.repeat.set(value * data.size.x / 100,
                                                    value * data.size.y / 100);
@@ -481,7 +478,7 @@ snorb.core.Terra = function(scene, data){
       };
     };
 
-    geometry = new THREE.PlaneGeometry(
+    geometry = new THREE.PlaneBufferGeometry(
       this.data.size.x * this.data.scale,
       this.data.size.y * this.data.scale,
       this.data.size.x,
@@ -497,6 +494,10 @@ snorb.core.Terra = function(scene, data){
     };
     geometry.computeFaceNormals();
     geometry.computeVertexNormals();
+
+    Object.keys(attributes).forEach(function(attr) {
+      geometry.addAttribute(attr, new THREE.BufferAttribute(attributes[attr], 1));
+    });
 
     // mass 0 (infinite), xdiv, ydiv
     this.object = new Physijs.HeightfieldMesh(geometry, material, 
